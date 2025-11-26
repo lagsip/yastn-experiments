@@ -112,7 +112,7 @@ class GenericGenerator:
         """
         return random_mpo(self._I, D_total=D_total, sigma=sigma, dtype=dtype, **kwargs)
 
-    def mps_from_latex(self, ltx_str, parameters=None, opts=None) -> MpsMpoOBC:
+    def mps_from_latex(self, ltx_str, parameters=None, opts=None, ignore_imunit=True) -> MpsMpoOBC:
         r"""
         Convert latex-like string to yastn.tn.mps MPS.
 
@@ -132,35 +132,33 @@ class GenericGenerator:
             It includes information on how to truncate the Schmidt values.
         """
 
-        """
-        c1, generated_params = self.any2simple_latex(ltx_str, parameters)
+        c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_imunit=ignore_imunit)
         print("This is c1: \n", c1, "\n")
         generated_params = {**self.parameters, **generated_params}
-        #c2 = latex2term(c1, generated_params)
-        #print("This is c2: \n", c2, "\n")
-        cc_operators = opmath.compl_conjugate(self._ops)
-        expanded_ops = dict(self._ops.to_dict(), **cc_operators)
-        #print("This is the full list of operators: \n", expanded_ops, "\n")
-        #c3 = self.term2generic_term(c2, expanded_ops, generated_params)
-        #print("This is c3: \n", c3, "\n")
-        #if opts is None:
-        #    opts={'tol': 5e-15}
-        #return generate_mpo(self._I, c3, opts)
-
-        """
-
-
-        parameters = {**self.parameters, **parameters}
-        c2 = latex2term(ltx_str, parameters)
+        c2 = latex2term(c1, generated_params)
         print("This is c2: \n", c2, "\n")
         cc_operators = opmath.compl_conjugate(self._ops)
         expanded_ops = dict(self._ops.to_dict(), **cc_operators)
         print("This is the full list of operators: \n", expanded_ops, "\n")
-        c3 = self.term2generic_term(c2, expanded_ops, parameters)
+        c3 = self.term2generic_term(c2, expanded_ops, generated_params)
         print("This is c3: \n", c3, "\n")
         if opts is None:
             opts={'tol': 5e-15}
         return generate_mpo(self._I, c3, opts)
+
+
+
+        # parameters = {**self.parameters, **parameters}
+        # c2 = latex2term(ltx_str, parameters)
+        # print("This is c2: \n", c2, "\n")
+        # cc_operators = opmath.compl_conjugate(self._ops)
+        # expanded_ops = dict(self._ops.to_dict(), **cc_operators)
+        # print("This is the full list of operators: \n", expanded_ops, "\n")
+        # c3 = self.term2generic_term(c2, expanded_ops, parameters)
+        # print("This is c3: \n", c3, "\n")
+        # if opts is None:
+        #     opts={'tol': 5e-15}
+        # return generate_mpo(self._I, c3, opts)
 
     def mps_from_templete(self, templete, parameters=None):   # remove from docs (DELETE)
         r"""
@@ -183,7 +181,7 @@ class GenericGenerator:
         c3 = self.term2generic_term(templete, self._ops.to_dict(), parameters)
         return generate_mpo(self._I, c3)
 
-    def any2simple_latex(self, ltx_str, parameters):
+    def any2simple_latex(self, ltx_str, parameters, ignore_imunit=True):
         r"""
         Helper function to rewrite the instruction given as a latex string
         to a simpler string that can be decoded further (see latex2term).
@@ -196,29 +194,37 @@ class GenericGenerator:
             dictionary with parameters for the generator
         """
 
+        new_expr = ltx_str
+        new_params = parameters.copy()
+
         # resolve commutators
-        comm_resolved = self.resolve_commutators(ltx_str)
+        new_expr = self.resolve_commutators(new_expr)
+        print("\nResolved Commutators:\n", new_expr)
 
         # extract rho
-        rho_extracted = self.extract_rho(comm_resolved)
+        new_expr = self.extract_rho(new_expr)
+        print("\nExtraced Rho:\n", new_expr)
 
         # rephrase summation
-        sum_rephrased = self.rewrite_sum(rho_extracted)
-
-        # rephrase summation again
-        sum_rephrased2 = self.rewrite_sum(sum_rephrased)
+        new_expr, new_params = self.rewrite_sum(new_expr, parameters)
+        print("\nRephrased Sum:\n", new_expr)
 
         # rename greek symbols
-        symbols_renamed, new_params = self.rename_symbols(sum_rephrased2, parameters)
+        new_expr, new_params = self.rename_symbols(new_expr, new_params)
+        print("\nRenamed Symbols:\n", new_expr)
 
         # extract constants
-        const_extracted, new_params = self.extract_constants(symbols_renamed, new_params)
+        new_expr, new_params = self.extract_constants(new_expr, new_params, ignore_imunit=ignore_imunit)
+        print("\nExtraced constants:\n", new_expr)
 
         # resolve ket/bra-marked operators
-        ketbra_resolved = self.resolve_ketbra(const_extracted)
+        new_expr = self.resolve_ketbra(new_expr)
+        print("\nResolved Ket-Bra-notation:\n", new_expr)
+
+        print("\nThe extended Parameters:\n", new_params)
 
         
-        return ketbra_resolved, new_params
+        return new_expr, new_params
 
     def resolve_commutators(self, expression):
         r"""
@@ -313,8 +319,8 @@ class GenericGenerator:
         right_terminator = [')',']','}']
         left_terminator = ['(','[','{']
 
-        incl_separator = ['/']
-        excl_separator = [' ']
+        incl_separator = ['/',' ']
+        excl_separator = []
 
         rho_loc = new_expr.find('\\rho')
         while(rho_loc != -1):
@@ -379,14 +385,13 @@ class GenericGenerator:
                             new_objects += obj[:subscript_ind] + ",bra" + obj[subscript_ind:]
                             break
                         subscript_ind += 1
-            print(separator_ind)
-            print(objects)
-            print(new_objects)
+            #print(separator_ind)
+            #print(objects)
+            #print(new_objects)
             
             # replace section
             object_str = ''.join(new_objects)
             new_expr = new_expr[:separator_ind[0]] + object_str + new_expr[separator_ind[-1]:]
-
 
             # get left side
             start_ind = rho_loc -1
@@ -400,7 +405,7 @@ class GenericGenerator:
                         break
                 
                     if symbol in incl_separator or symbol in excl_separator:
-                        separator_ind = [start_ind] + separator_ind
+                        separator_ind = [start_ind+1] + separator_ind
                 else:
                     # if we are in a bracket right now ignore it and wait for it to close again
                     if symbol in left_terminator:
@@ -411,10 +416,10 @@ class GenericGenerator:
 
                 start_ind -= 1
             
-            # collect various objects that need be conjugated
+            # collect various objects to add the ket subscript to
             objects = []
             for i in range(len(separator_ind)-1):
-                start_ind = separator_ind[i]
+                start_ind = separator_ind[i] +1
                 end_ind = separator_ind[i+1]
                 # if just empty space don't consider
                 if end_ind - start_ind < 2:
@@ -427,20 +432,16 @@ class GenericGenerator:
                 # add to objects
                 objects += [new_expr[start_ind:end_ind]]
 
-            # for each object add the bra subscript
+            # for each object add the ket subscript
             new_objects = []
             for obj in objects:
                 subscript_ind = obj.find('_{') + 2
                 if(subscript_ind == 1):
-                    subscript_ind = obj.find('_') + 1
-                    if(subscript_ind == 0):
-                        subscript_ind = obj.find('^')
-                        if(subscript_ind == -1):
-                            new_objects += (obj + '_{ket}')
-                        else:
-                            new_objects += obj[:(subscript_ind-1)] + "_{ket}" + obj[(subscript_ind-1):]
+                    subscript_ind = obj.find('^')
+                    if(subscript_ind == -1):
+                        new_objects += (obj + '_{ket}')
                     else:
-                        new_objects += obj[:(subscript_ind)] + "{," + obj[subscript_ind] + "ket}" + obj[(subscript_ind+1):]
+                        new_objects += obj[:(subscript_ind-1)] + "_{ket}" + obj[(subscript_ind-1):]
                 else:
                     layer = 0
                     while subscript_ind < len(obj):
@@ -453,17 +454,17 @@ class GenericGenerator:
                             new_objects += obj[:subscript_ind] + ",ket" + obj[subscript_ind:]
                             break
                         subscript_ind += 1
-            print(separator_ind)
-            print(objects)
-            print(new_objects)
+            #print(separator_ind)
+            #print(objects)
+            #print(new_objects)
             # replace section
             object_str = ''.join(new_objects)
-            new_expr = new_expr[:separator_ind[0]+1] + object_str + new_expr[separator_ind[-1]:]
+            new_expr = new_expr[:(separator_ind[0]+1)] + object_str + new_expr[separator_ind[-1]:]
             new_expr = new_expr.replace('\\rho', '', 1)
             
             rho_loc = new_expr.find("\\rho")
 
-            print(new_expr)
+            #print(new_expr)
 
         return new_expr
 
@@ -555,28 +556,32 @@ class GenericGenerator:
         """
 
         new_expr = expression
-        new_params = parameters
+        new_params = parameters.copy()
         global_iterators = []
 
         sum_loc = new_expr.find("\\sum")
         while(sum_loc != -1):
             # only need up to 5 args for sum - _ - subscript - ^ - superscript
-            sum_terms, sum_end = self.split_ltx2terms(ltx_str=new_expr, index=sum_loc, start_layer=1, max_terms=5)
+            sum_terms, sum_end = self.split_ltx2terms(ltx_str=new_expr, index=sum_loc, start_layer=1, max_terms=5, return_length=True)
+            #print(sum_terms)
             if(sum_terms[1] == "_"):
                 sum_type = ""
                 # test for e.g. "i = 0" in subscript with "N" in superscript
                 sub_terms = self.split_ltx2terms(ltx_str=sum_terms[2])
                 left = True
-                iterators = []
-                subvalues = []
-                bound_supvalues = []
+                iterators = [""]
+                subvalues = [""]
+                bound_supvalues = [""]
                 sum_conditions = []
 
-                for i in range(len(1, sub_terms-1)):
+                #print(sub_terms)
+
+                for i in range(1, len(sub_terms)-1):
                     term = sub_terms[i]
+                    #print(term)
                     if(term == ";"):
                         # a ; indicates a new set of conditions so we save the current set of conditions
-                        sum_conditions += [{"type":sum_type if sum_type else "over_set",
+                        sum_conditions += [{"type":sum_type if sum_type else "over",
                                             "iterators":iterators.copy(),
                                             "subvalues":subvalues.copy(),
                                             "supvalues":[]}]
@@ -597,17 +602,21 @@ class GenericGenerator:
                     elif(term in ["\\in"]):
                         if(not sum_type):
                             # if the element operator is found, then we seemingly have a set pattern where the subscript states the iterators to be elements of a set
-                            sum_type = "in_set"
+                            sum_type = "in"
                         left = False
                     elif(left):
                         # if left is true we haven't found an = sign (this could of course also entail a < or >= or similar but )
                         if(term != ","):
-                            iterators += [term]
+                            iterators[-1] += term
+                        else:
+                            iterators += [""]
                     else:
                         # if right an = sign has been found and we should get the bound value
                         if(term != ","):
-                            subvalues += [term]
-                sum_conditions += [{"type":sum_type if sum_type else "over_set",
+                            subvalues[-1] += term
+                        else:
+                            subvalues += []
+                sum_conditions += [{"type":sum_type if sum_type else "over",
                                     "iterators":iterators.copy(),
                                     "subvalues":subvalues.copy(),
                                     "supvalues":[]}]
@@ -616,89 +625,98 @@ class GenericGenerator:
                     sup_terms = self.split_ltx2terms(sum_terms[4])
                     condition_num = 0
 
+                    #print(sup_terms)
 
                     for i in range(1,len(sup_terms)-1):
                         term = sup_terms[i]
+                        #print(term)
 
                         if(term == ";"):
                             while(True):
-                                if(sum_conditions[condition_num].type in ["range","over_set"]):
+                                if(sum_conditions[condition_num]["type"] in ["range","over"]):
                                     # if the nth sum_condition is of range or set type (which require a superscript) then assign to it the latest superscript term
-                                    sum_conditions[condition_num].supvalues = bound_supvalues.copy()
+                                    sum_conditions[condition_num]["supvalues"] = bound_supvalues.copy()
                                     condition_num += 1
                                     break
                                 condition_num += 1
                                 if(condition_num >= len(sum_conditions)):
                                     raise SyntaxError("Sum should have as many superscript terms as range or set terms in subscript")
                         elif(term != ","):
-                            sup_terms += [term]
+                            bound_supvalues[-1] += term
+                        else:
+                            bound_supvalues += []
+                    
+                    while(True):
+                        if(sum_conditions[condition_num]["type"] in ["range","over"]):
+                            # if the nth sum_condition is of range or set type (which require a superscript) then assign to it the latest superscript term
+                            sum_conditions[condition_num]["supvalues"] = bound_supvalues.copy()
+                            condition_num += 1
+                            break
+                        condition_num += 1
+                        if(condition_num >= len(sum_conditions)):
+                            raise SyntaxError("Sum should have as many superscript terms as range or set terms in subscript")
                 else:
-                    sum_end = len(sum_terms[0]) + len(sum_terms[1]) + len(sum_terms[2])
+                    _, sum_end = self.split_ltx2terms(new_expr, sum_loc, start_layer=1, max_terms=3, return_length=True)
 
                 new_sums = ""
                 for cond in sum_conditions:
                     iterator_str = ""
                     set_str = ""
-                    if(cond.type == "range"):
-                        iterator_str = ",".join(cond.iterators)
-                        set_str = cond.subvalues[0] + cond.supvalues[0]
+                    #print(cond)
+                    iterator_str = ",".join(cond["iterators"])
+                    if(cond["type"] == "range"):
+                        lower = self.resolve_term(self.split_ltx2terms(cond["subvalues"][0], start_layer=1), new_params)
+                        higher = self.resolve_term(self.split_ltx2terms(cond["supvalues"][0], start_layer=1), new_params)
+                        l = int(lower.real)
+                        h = int(higher.real)
+                        
+                        iterator_count = len(cond["iterators"])
+                        set_str = str(iterator_count) + "range" + str(l) + "to" + str(h)
+                        if(iterator_count > 1):
+                            new_params[set_str] = self.gen_tuple_list(list(range(l,h+1)), iterator_count)
+                        else:
+                            new_params[set_str] = list(range(l,h+1))
 
-                        lower = int(cond.subvalues[0])
-                        higher = 0
-                        try:
-                            higher = int(cond.supvalues[0])
-                        except Exception:
-                            try:
-                                higher = parameters[cond.supvalues[0]]
-                            except Exception:
-                                raise ValueError(f"Value of {cond.supvalues[0]} couldn't be resolved to a number")
+                    elif(cond["type"] == "over"):
+                        higher = self.resolve_term(self.split_ltx2terms(cond["supvalues"][0], start_layer=1), new_params)
+                        
+                        iterator_count = len(cond["iterators"])
+                        set_str = str(iterator_count) + "rangeto" + str(h)
 
-                        new_params[set_str] = range(lower+1, higher+1)
+                        if isinstance(higher, list):
+                            new_params[set_str] = higher
+                        else:
+                            h = int(higher.real)
+                            if(iterator_count > 1):
+                                new_params[set_str] = self.gen_tuple_list(list(range(0,h+1)), iterator_count)
+                            else:
+                                new_params[set_str] = list(range(0, h+1))
 
-                    elif(cond.type == "over_set"):
-                        iterator_str = ",".join(cond.iterators)
-                        set_str = cond.supvalues[0]
+                    elif(cond["type"] == "inequality"):
+                        # assume smaller sign
+                        ## TODO: implement differentiation of inequalities
+                        higher = self.resolve_term(self.split_ltx2terms(cond["supvalues"][0], start_layer=1), new_params)
+                        h = int(higher.real)
+                            
+                        set_str = str(len(cond["iterators"])) + "rangeto" + str(h)
 
-                    elif(cond.type == "inequality"):
-                        iterator_str = ",".join(cond.iterators)
-                        set_str = "Range" + cond.supvalues[0]
-
-                        lower = 0
-                        higher = 0
-                        try:
-                            higher = int(cond.supvalues[0])
-                        except Exception:
-                            try:
-                                higher = parameters[cond.supvalues[0]]
-                            except Exception:
-                                raise ValueError(f"Value of {cond.supvalues[0]} couldn't be resolved to a number")
-
-                        new_params[set_str] = range(min(lower)+1, max(higher)+1)
+                        new_params[set_str] = list(range(0, h+1))
                     
-                    elif(cond.type == "in_set"):
-                        iterator_str = ",".join(cond.iterators)
-                        set_str = cond.subvalues[0]
+                    elif(cond["type"] == "in"):
+                        set_str = cond["subvalues"][0]
                     
-                    new_sums += "\\sum_{" + iterator_str + "\\in" + set_str + "}"
+                    new_sums += "\\sum_{" + iterator_str + " \\in " + set_str + "} "
 
+                #print("loc",sum_loc)
+                #print("end",sum_end)
                 new_expr = new_expr[:sum_loc] + new_sums + new_expr[sum_end:]
 
-            sum_loc = new_expr.find("\\sum", sum_loc+1)
+            sum_loc = new_expr.find("\\sum", sum_loc+4)
 
-        return new_expr
+            #print(new_expr)
+
+        return new_expr, new_params
     
-    def rewrite_sum2(self, expression, parameters):
-        r"""
-        Helper function to rewrite the instruction given as a string
-
-        Parameters
-        ----------
-        expression: string
-            expression as string to rewrite sum in
-        """
-
-        return expression, parameters
-
     def rename_symbols(self, expression, parameters):
         r"""
         Helper function to rewrite the instruction given as a string
@@ -709,9 +727,55 @@ class GenericGenerator:
             expression as string to rename symbols in
         """
 
-        return expression, parameters
+        new_expr = expression
+        new_params = parameters.copy()
 
-    def extract_constants(self, expression, parameters):
+        # first consider sigma as the standard operator
+        sigma_loc = new_expr.find("\\sigma")
+        while(sigma_loc != -1):
+            sigma_terms, sigma_end = self.split_ltx2terms(new_expr, sigma_loc, start_layer=1, max_terms=5, return_length=True)
+            sigma_mid = sigma_loc + len(sigma_terms[0]) + len(sigma_terms[1]) + len(sigma_terms[2])
+            op = "sigma"
+            if(sigma_terms[1] == "^"):
+                # potentially the sigma doesn't have a subscript and only superscript
+                sup_terms = self.split_ltx2terms(sigma_terms[2])
+                if (len(sup_terms) == 1):
+                    op = sup_terms[0]
+                else:
+                    op = sup_terms[1]
+                
+                # erase superscript
+                new_expr = new_expr[:(sigma_loc+6)] + new_expr[sigma_mid:]
+                
+            elif(sigma_terms[3] == "^"):
+                # this should be the common case in which we find a subscript and a superscript
+                sup_terms = self.split_ltx2terms(sigma_terms[4])
+                if (len(sup_terms) == 1):
+                    op = sup_terms[0]
+                else:
+                    op = "".join(sup_terms[1:-1])
+                    
+                # erase superscript
+                new_expr = new_expr[:sigma_mid] + new_expr[sigma_end:]
+            
+            new_expr = new_expr[:sigma_loc] + op + new_expr[(sigma_loc+6):]
+            sigma_loc = new_expr.find("\\sigma", sigma_loc+1)
+
+        
+        # now \gamma is another common symbol
+        gamma_loc = new_expr.find("\\gamma")
+        while(gamma_loc != -1):
+            new_expr = new_expr[:gamma_loc] + new_expr[(gamma_loc+1):]
+
+            gamma_loc = new_expr.find("\\gamma", gamma_loc+6)
+        if("\\gamma" in new_params):
+            new_params["gamma"] = new_params["\\gamma"]
+
+
+
+        return new_expr, new_params
+
+    def extract_constants(self, expression, parameters, ignore_imunit=False):
         r"""
         Helper function to rewrite the instruction given as a string
 
@@ -721,7 +785,53 @@ class GenericGenerator:
             expression as string to extract constants from
         """
 
-        return expression, parameters
+        new_expr = expression
+        new_params = parameters.copy()
+
+        terminators = [","," ","{","}","[","]","(",")","\\","+","-","*","/"]
+        digits = ["0","1","2","3","4","5","6","7","8","9"]
+
+        if(not ignore_imunit):
+            new_params["imun"] = 1j
+
+
+            # look for imaginary unit
+            i_loc = new_expr.find("i")
+            while(i_loc != -1):
+                # test whether used as imaginary unit and not part of a name
+                if(new_expr[i_loc+1] in terminators):
+                    # only try if for sure not the start of a word
+                    curr_pos = i_loc - 1
+                    while(new_expr[curr_pos] in digits and 0 < curr_pos):
+                        curr_pos -= 1
+                    if(new_expr[curr_pos] in terminators):
+                        # this means that it really is an i
+                        new_expr = new_expr[:i_loc] + "imun" + new_expr[(i_loc+1):]
+
+                i_loc = new_expr.find("i", i_loc+1)
+
+        # look for fractions
+        f_loc = new_expr.find("\\frac{")
+        while(f_loc != -1):
+            top_terms, mid_loc = self.split_ltx2terms(new_expr, f_loc + 5, return_length=True)
+            bot_terms, end_loc = self.split_ltx2terms(new_expr, mid_loc, return_length=True)
+            try:
+                top_val = self.resolve_term(top_terms[1:-1], parameters=parameters)
+                bot_val = self.resolve_term(bot_terms[1:-1], parameters=parameters)
+                str_val = str(top_val.real) + "pls" + str(top_val.imag) + "jfrac" + str(bot_val.real) + "pls" + str(bot_val.imag) + "j"
+                val = top_val/bot_val
+
+                new_expr = new_expr[:f_loc] + str_val + new_expr[end_loc:]
+                new_params[str_val] = val
+            except:
+                # In this case the fraction probably contained unresolvable values such as operators. Ignore for now
+                pass
+
+            f_loc = new_expr.find("\\frac{", f_loc+1)
+
+
+
+        return new_expr, new_params
 
     def resolve_ketbra(self, expression):
         r"""
@@ -733,7 +843,69 @@ class GenericGenerator:
             expression as string to resolve ket/bra notation
         """
 
-        return expression
+        new_expr = expression
+
+        ket_loc = new_expr.find("ket")
+        while(ket_loc != -1):
+
+            # so on the same layer as the ket notation, we gather all the terms until the end of the subscript bracket
+            end_subscr, end_ind = self.split_ltx2terms(new_expr, ket_loc, start_layer=1, return_length=True)
+            # now, knowing the end index, we start splitting from here backwards to the beginning
+            subscript, start_ind = self.split_ltx2terms(new_expr, end_ind-1, return_length=True)
+
+            # if ket actually isn't in subscript skip
+            if(new_expr[start_ind] != "_"):
+                break
+
+            ket_arg_ind = len(subscript) - len(end_subscr)
+            # remove ket from subscript (since we know the amount of elements from the ket to end iteration)
+            subscript = subscript[:-len(end_subscr)] + end_subscr[1:]
+            # if multiple objects were in the subscript separated by a comma, remove the comma on 1 side
+            if(subscript[ket_arg_ind] == ","):
+                subscript = subscript[:ket_arg_ind] + subscript[(ket_arg_ind+1):]
+            elif(subscript[ket_arg_ind-1] == ","):
+                subscript = subscript[:(ket_arg_ind-1)] + subscript[ket_arg_ind:]
+            # if only ket was in subscript, remove the leftover brackets
+            if(len(subscript) < 3):
+                subscript = []
+
+            new_expr = new_expr[:(start_ind+1)] + "".join(subscript) + new_expr[end_ind:]
+
+
+            ket_loc = new_expr.find("ket", ket_loc+1)
+
+            
+        bra_loc = new_expr.find("bra")
+        while(bra_loc != -1):
+
+            # so on the same layer as the ket notation, we gather all the terms until the end of the subscript bracket
+            end_subscr, end_ind = self.split_ltx2terms(new_expr, bra_loc, start_layer=1, return_length=True)
+            # now, knowing the end index, we start splitting from here backwards to the beginning
+            subscript, start_ind = self.split_ltx2terms(new_expr, end_ind-1, return_length=True)
+
+            # if ket actually isn't in subscript skip
+            if(new_expr[start_ind] != "_"):
+                break
+
+            bra_arg_ind = len(subscript) - len(end_subscr)
+            # remove ket from subscript (since we know the amount of elements from the ket to end iteration)
+            subscript = subscript[:-len(end_subscr)] + end_subscr[1:]
+            # if multiple objects were in the subscript separated by a comma, remove the comma on 1 side
+            if(subscript[bra_arg_ind] == ","):
+                subscript = subscript[:bra_arg_ind] + subscript[(bra_arg_ind+1):]
+            elif(subscript[bra_arg_ind-1] == ","):
+                subscript = subscript[:(bra_arg_ind-1)] + subscript[bra_arg_ind:]
+            # if only ket was in subscript, remove the leftover brackets
+            if(len(subscript) < 3):
+                subscript = []
+
+            new_expr = new_expr[:(start_ind)] + "cc_" + "".join(subscript) + new_expr[end_ind:]
+
+
+            bra_loc = new_expr.find("bra", bra_loc+1)
+
+
+        return new_expr
 
 
     def term2generic_term(self, c2, obj_yast, obj_number):
@@ -759,6 +931,7 @@ class GenericGenerator:
             amplitude, positions, operators = float(1), [], []
             for iop in ic.op:
                 element, *indicies = iop
+                print("\nindices\n", indicies)
                 if element in obj_number:
                     # can have many indicies for cross terms
                     mapindex = tuple([self._map[ind] for ind in indicies]) if indicies else None
@@ -774,12 +947,13 @@ class GenericGenerator:
             Hterm_list.append(Hterm(amplitude, positions, operators))
         return Hterm_list
 
-    def split_ltx2terms(self, ltx_str, index, start_layer=0, max_terms=-1,
+    def split_ltx2terms(self, ltx_str, index=0, start_layer=0, max_terms=-1,
                        left_terminators=['(','[','{'],
                        right_terminators=[')',']','}'],
-                       symbols=['+','-',',',';',':','=','<','>','|','_','^'],
+                       symbols=['+','-',"*","/",',',';',':','=','<','>','|','_','^'],
                        spacers=[' '],
-                       escape_chars=['\\']):
+                       escape_chars=['\\'],
+                       return_length=False):
         r"""
         Helper function to split a latex term into its constituent terms as seen from the level of the starting point.
 
@@ -808,7 +982,7 @@ class GenericGenerator:
         curr_ind = index
         terms = [""]
         escape = ''
-        
+        #print(ltx_str)
         while(True):
             symbol = ltx_str[curr_ind]
 
@@ -851,14 +1025,17 @@ class GenericGenerator:
 
             curr_ind += step
 
+            if(max_terms != -1):
+                if(len([x for x in terms if x]) > max_terms):
+                    terms = [x for x in terms if x]
+                    curr_ind -= len(terms[-1])
+                    while(ltx_str[curr_ind-1] == " "): curr_ind -= 1
+                    terms = terms[:-1]
+                    break
+            if(layer == 0 and not escape): break
             if(not 0 <= curr_ind < len(ltx_str)): 
                 if(start_layer == 0): raise SyntaxError("Latex Term should contain all closing brackets")
                 else: break
-            if(layer == 0 and not escape): break
-            if(max_terms != -1):
-                if(len(terms) > max_terms):
-                    terms = terms[:-1]
-                    break
 
         # after the loop clean up the resulting terms
         # remove empty string in the array
@@ -869,6 +1046,86 @@ class GenericGenerator:
             terms = terms[::-1]
             terms = [x[::-1] for x in terms]
         
-        return terms, curr_ind
+        if(return_length):
+            return terms, curr_ind
+        else:
+            return terms
+    
+
+    def resolve_term(self, term, parameters,
+                         operations={
+                                     "*": lambda a,b: a*b,
+                                     "/": lambda a,b: a/b,
+                                     "+": lambda a,b: a+b,
+                                     "-": lambda a,b: a-b},
+                             brackets=["{","[","("]):
+        
+        new_term = term.copy()
+
+        for i in range(len(new_term)):
+            t = new_term[i]
+            if t[0] in brackets or (t[0] == "\\" and t[1] in brackets):
+                new_term[i] = self.resolve_term(self.split_ltx2terms(t),parameters=parameters,operations=operations)
+
+        for op in list(operations):
+            while(op in new_term):
+                ind = new_term.index(op)
+                if(ind == 0):
+                    # if the found index is 0 consider that it might be a sign, otherwise ignore it
+                    if(op == "-"):
+                        new_term = [-1*new_term[1]] + new_term[2:]
+                    else:
+                        new_term = new_term[1:]
+                elif(0 < ind < (len(new_term)-1)):
+                    # if the ind is inbetween two other entries, perform the operation on those two entries
+                    be4 = []
+                    after = []
+                    if(1 < ind):
+                        be4 = new_term[:(ind-2)]
+                    if(ind < len(new_term)-2):
+                        after = new_term[(ind+2):]
+
+                    args = [self.get_value(new_term[ind-1], parameters), self.get_value(new_term[ind+1], parameters)]
+                    new_term = be4 + [operations[op](args[0], args[1])] + after
+                else:
+                    new_term = new_term[:-1]
+
+
+        return complex(new_term[0])
+
+        
+    def get_value(self, variable, parameters):
+        out = -1
+        try:
+            out = parameters[variable]
+        except:
+            try:
+                out = complex(variable)
+            except:
+                raise TypeError(f"{variable} couldn't be resolved to a parameter or numerical value")
+            
+        return out
+    
+
+    def gen_tuple_list(self, el_list, dims):
+
+        tuples = []
+
+        for i in range(dims):
+            if tuples:
+                tuples_temp = tuples.copy()
+                tuples = []
+                for el in el_list:
+                    for tup in tuples_temp:
+                        tuples += [tup + (el,)]
+                tuples_temp = []
+
+            else:
+                for el in el_list:
+                    tuples += [(el,)]
+
+        return tuples
+
+
 
 
