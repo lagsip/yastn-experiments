@@ -871,16 +871,23 @@ class GenericGenerator:
                 break
 
             ket_arg_ind = len(subscript) - len(end_subscr)
+            
             # remove ket from subscript (since we know the amount of elements from the ket to end iteration)
             subscript = subscript[:-len(end_subscr)] + end_subscr[1:]
             # if multiple objects were in the subscript separated by a comma, remove the comma on 1 side
-            if(subscript[ket_arg_ind] == ","):
+            if(ket_arg_ind+1 < len(subscript) and subscript[ket_arg_ind+1] == ","):
+                print("found comma")
                 subscript = subscript[:ket_arg_ind] + subscript[(ket_arg_ind+1):]
             elif(subscript[ket_arg_ind-1] == ","):
                 subscript = subscript[:(ket_arg_ind-1)] + subscript[ket_arg_ind:]
             # if only ket was in subscript, remove the leftover brackets
             if(len(subscript) < 3):
                 subscript = []
+
+            for i in range(len(subscript)):
+                if(subscript[i] not in [',','{','}','(',')','[',']']):
+                    subscript[i] += 'k'
+                
 
             new_expr = new_expr[:(start_ind+1)] + "".join(subscript) + new_expr[end_ind:]
 
@@ -904,13 +911,18 @@ class GenericGenerator:
             # remove bra from subscript (since we know the amount of elements from the ket to end iteration)
             subscript = subscript[:-len(end_subscr)] + end_subscr[1:]
             # if multiple objects were in the subscript separated by a comma, remove the comma on 1 side
-            if(subscript[bra_arg_ind] == ","):
+            if(bra_arg_ind+1 < len(subscript) and subscript[bra_arg_ind+1] == ","):
                 subscript = subscript[:bra_arg_ind] + subscript[(bra_arg_ind+1):]
             elif(subscript[bra_arg_ind-1] == ","):
                 subscript = subscript[:(bra_arg_ind-1)] + subscript[bra_arg_ind:]
             # if only ket was in subscript, remove the leftover brackets
             if(len(subscript) < 3):
                 subscript = []
+
+            for i in range(len(subscript)):
+                if(subscript[i] not in [',','{','}','(',')','[',']']):
+                    subscript[i] += 'b'
+                
 
             new_expr = new_expr[:(start_ind)] + "cc_" + "".join(subscript) + new_expr[end_ind:]
 
