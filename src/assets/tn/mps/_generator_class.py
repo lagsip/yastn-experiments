@@ -319,7 +319,7 @@ class GenericGenerator:
         right_terminator = [')',']','}']
         left_terminator = ['(','[','{']
 
-        incl_separator = ['/',' ']
+        incl_separator = ['/', ' ']
         excl_separator = []
 
         rho_loc = new_expr.find('\\rho')
@@ -405,7 +405,7 @@ class GenericGenerator:
                         break
                 
                     if symbol in incl_separator or symbol in excl_separator:
-                        separator_ind = [start_ind+1] + separator_ind
+                        separator_ind = [start_ind] + separator_ind
                 else:
                     # if we are in a bracket right now ignore it and wait for it to close again
                     if symbol in left_terminator:
@@ -419,8 +419,8 @@ class GenericGenerator:
             # collect various objects to add the ket subscript to
             objects = []
             for i in range(len(separator_ind)-1):
-                start_ind = separator_ind[i] +1
-                end_ind = separator_ind[i+1]
+                start_ind = separator_ind[i]+1
+                end_ind = separator_ind[i+1]+1
                 # if just empty space don't consider
                 if end_ind - start_ind < 2:
                     continue
@@ -931,7 +931,7 @@ class GenericGenerator:
             amplitude, positions, operators = float(1), [], []
             for iop in ic.op:
                 element, *indicies = iop
-                print("\nindices\n", indicies)
+                #print("\nindices\n", indicies)
                 if element in obj_number:
                     # can have many indicies for cross terms
                     mapindex = tuple([self._map[ind] for ind in indicies]) if indicies else None
