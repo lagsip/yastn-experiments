@@ -206,7 +206,7 @@ class GenericGenerator:
         print("\nExtraced Rho:\n", new_expr)
 
         # rephrase summation
-        new_expr, new_params = self.rewrite_sum(new_expr, parameters)
+        new_expr, new_params = self.rewrite_sum(new_expr, parameters, extend_kb_notation=True)
         print("\nRephrased Sum:\n", new_expr)
 
         # rename greek symbols
@@ -553,7 +553,7 @@ class GenericGenerator:
 
     #     return expression
 
-    def rewrite_sum(self, expression, parameters):
+    def rewrite_sum(self, expression, parameters,extend_kb_notation=False):
         r"""
         Helper function to rewrite the instruction given as a string
 
@@ -671,7 +671,10 @@ class GenericGenerator:
                     iterator_str = ""
                     set_str = ""
                     #print(cond)
-                    iterator_str = ",".join(cond["iterators"])
+                    if(extend_kb_notation):
+                        iterator_str = ','.join(cond["iterators"] + [sym + suff for sym in cond["iterators"] for suff in ['k','b']])
+                    else:
+                        iterator_str = ",".join(cond["iterators"])
                     if(cond["type"] == "range"):
                         lower = self.resolve_term(self.split_ltx2terms(cond["subvalues"][0], start_layer=1), new_params)
                         higher = self.resolve_term(self.split_ltx2terms(cond["supvalues"][0], start_layer=1), new_params)
@@ -714,6 +717,8 @@ class GenericGenerator:
                         set_str = cond["subvalues"][0]
                     
                     new_sums += "\\sum_{" + iterator_str + " \\in " + set_str + "} "
+                    if(extend_kb_notation):
+                        new_params[set_str] = self.extend_tuple_listKB(new_params[set_str])
 
                 #print("loc",sum_loc)
                 #print("end",sum_end)
@@ -896,7 +901,7 @@ class GenericGenerator:
                 break
 
             bra_arg_ind = len(subscript) - len(end_subscr)
-            # remove ket from subscript (since we know the amount of elements from the ket to end iteration)
+            # remove bra from subscript (since we know the amount of elements from the ket to end iteration)
             subscript = subscript[:-len(end_subscr)] + end_subscr[1:]
             # if multiple objects were in the subscript separated by a comma, remove the comma on 1 side
             if(subscript[bra_arg_ind] == ","):
@@ -1134,6 +1139,22 @@ class GenericGenerator:
 
         return tuples
 
+    def extend_tuple_listKB(self, el_list):
+
+        extended = []
+
+        for t in el_list:
+            if(isinstance(t,tuple)):
+                # this makes a copy of the tuple
+                tup = t + tuple()
+                for it in t:
+                    tup += (2*it,2*it+1)
+                extended += [tup]
+            if(isinstance(t,int)):
+                extended += [(t,2*t,2*t+1)]
+
+
+        return extended
 
 
 
