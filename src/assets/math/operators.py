@@ -1,5 +1,3 @@
-import numpy as np
-
 def compl_conjugate(meta_op) -> dict:
     r"""
     Helper function to complex conjugate an operator.
