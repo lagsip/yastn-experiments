@@ -112,7 +112,7 @@ class GenericGenerator:
         """
         return random_mpo(self._I, D_total=D_total, sigma=sigma, dtype=dtype, **kwargs)
 
-    def mps_from_latex(self, ltx_str, parameters=None, opts=None, ignore_imunit=True) -> MpsMpoOBC:
+    def mps_from_latex(self, ltx_str, parameters=None, opts=None, ignore_i=True) -> MpsMpoOBC:
         r"""
         Convert latex-like string to yastn.tn.mps MPS.
 
