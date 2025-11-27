@@ -376,7 +376,7 @@ class GenericGenerator:
                         else:
                             new_objects += obj[:subscript_ind] + "_{bra}" + obj[subscript_ind:]
                     else:
-                        new_objects += obj[:subscript_ind] + '{' + obj[subscript_ind] + ',ket}' + obj[(subscript_ind+1):]
+                        new_objects += obj[:subscript_ind] + '{' + obj[subscript_ind] + ',bra}' + obj[(subscript_ind+1):]
                 else:
                     layer = 0
                     while subscript_ind < len(obj):
