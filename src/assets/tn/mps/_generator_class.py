@@ -132,7 +132,7 @@ class GenericGenerator:
             It includes information on how to truncate the Schmidt values.
         """
 
-        c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_imunit=ignore_imunit)
+        c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_i=ignore_i)
         print("This is c1: \n", c1, "\n")
         generated_params = {**self.parameters, **generated_params}
         c2 = latex2term(c1, generated_params)
@@ -181,7 +181,7 @@ class GenericGenerator:
         c3 = self.term2generic_term(templete, self._ops.to_dict(), parameters)
         return generate_mpo(self._I, c3)
 
-    def any2simple_latex(self, ltx_str, parameters, ignore_imunit=True):
+    def any2simple_latex(self, ltx_str, parameters, ignore_i=True):
         r"""
         Helper function to rewrite the instruction given as a latex string
         to a simpler string that can be decoded further (see latex2term).
@@ -214,7 +214,7 @@ class GenericGenerator:
         print("\nRenamed Symbols:\n", new_expr)
 
         # extract constants
-        new_expr, new_params = self.extract_constants(new_expr, new_params, ignore_imunit=ignore_imunit)
+        new_expr, new_params = self.extract_constants(new_expr, new_params, ignore_i=ignore_i)
         print("\nExtraced constants:\n", new_expr)
 
         # resolve ket/bra-marked operators
@@ -368,11 +368,15 @@ class GenericGenerator:
             for obj in objects:
                 subscript_ind = obj.find('_{') + 2
                 if(subscript_ind == 1):
-                    subscript_ind = obj.find('^')
-                    if(subscript_ind == -1):
-                        new_objects += (obj + '_{bra}')
+                    subscript_ind = obj.find('_') + 1
+                    if(subscript_ind == 0):
+                        subscript_ind = obj.find('^')
+                        if(subscript_ind == -1):
+                            new_objects += (obj + '_{bra}')
+                        else:
+                            new_objects += obj[:subscript_ind] + "_{bra}" + obj[subscript_ind:]
                     else:
-                        new_objects += obj[:(subscript_ind-1)] + "_{bra}" + obj[(subscript_ind-1):]
+                        new_objects += obj[:subscript_ind] + '{' + obj[subscript_ind] + ',ket}' + obj[(subscript_ind+1):]
                 else:
                     layer = 0
                     while subscript_ind < len(obj):
@@ -437,11 +441,15 @@ class GenericGenerator:
             for obj in objects:
                 subscript_ind = obj.find('_{') + 2
                 if(subscript_ind == 1):
-                    subscript_ind = obj.find('^')
-                    if(subscript_ind == -1):
-                        new_objects += (obj + '_{ket}')
+                    subscript_ind = obj.find('_') + 1
+                    if(subscript_ind == 0):
+                        subscript_ind = obj.find('^')
+                        if(subscript_ind == -1):
+                            new_objects += (obj + '_{ket}')
+                        else:
+                            new_objects += obj[:subscript_ind] + "_{ket}" + obj[subscript_ind:]
                     else:
-                        new_objects += obj[:(subscript_ind-1)] + "_{ket}" + obj[(subscript_ind-1):]
+                        new_objects += obj[:subscript_ind] + '{' + obj[subscript_ind] + ',ket}' + obj[(subscript_ind+1):]
                 else:
                     layer = 0
                     while subscript_ind < len(obj):
@@ -775,7 +783,7 @@ class GenericGenerator:
 
         return new_expr, new_params
 
-    def extract_constants(self, expression, parameters, ignore_imunit=False):
+    def extract_constants(self, expression, parameters, ignore_i=False):
         r"""
         Helper function to rewrite the instruction given as a string
 
@@ -791,7 +799,7 @@ class GenericGenerator:
         terminators = [","," ","{","}","[","]","(",")","\\","+","-","*","/"]
         digits = ["0","1","2","3","4","5","6","7","8","9"]
 
-        if(not ignore_imunit):
+        if(not ignore_i):
             new_params["imun"] = 1j
 
 
