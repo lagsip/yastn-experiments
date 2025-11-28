@@ -45,14 +45,16 @@ def test_env(config_kwargs, sym='dense', N=4):
     I = mps_fun.product_mpo(ops.I(), N)
     A = mps_fun.random_mpo(I)
     
-    n2Gen = gen_mps.GenericGenerator(2*N, ops)
-    L = n2Gen.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False)
+    generate = gen_mps.GenericGenerator(2*N, ops)
+    L = generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
 
 
-    my_end = env.My_EnvParent_3_obc(A,L,A)
+    my_env = env.Env_double_lindblad(A,L,A)
+    my_env.update_env_(0)
+    my_env.update_env_(1)
 
 
-lindblad_mpo_latex(config_kwargs=config_kwargs)
+# lindblad_mpo_latex(config_kwargs=config_kwargs)
 
-# test_env(config_kwargs=config_kwargs)
+test_env(config_kwargs=config_kwargs)
     
