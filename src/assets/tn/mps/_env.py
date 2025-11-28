@@ -17,7 +17,7 @@ from __future__ import annotations
 # import abc
 # import copy
 # from numbers import Number
-from yastn import eye, tensordot, ncon, vdot, qr, svd, Tensor, YastnError
+from yastn import eye, ones, tensordot, ncon, vdot, qr, svd, Tensor, YastnError
 # from yastn.tn.mps import MpsMpoOBC, MpoPBC
 from yastn.tn.mps._env import EnvParent
 
@@ -50,18 +50,16 @@ class EnvParent_double3_obc(EnvParent_double3):
 
     def __init__(self, bra, op, ket):
         super().__init__(bra, op, ket)
-
-        legs = [self.bra.virtual_leg('first'), self.ket.virtual_leg('first').conj(), self.ket.virtual_leg('first').conj(), self.bra.virtual_leg('first')]
-        legv = op.virtual_leg('first').conj()
-        # n_lt = ket.config.sym.add_charges(legv.t[0], signatures=(legv.s,), new_signature=-1)
-        tmp = eye(self.config, legs=legs, isdiag=False)
-        self.F[-1, 0] = tmp.add_leg(axis=2, leg=legv)
-
-        legs = [self.bra.virtual_leg('last'), self.ket.virtual_leg('last').conj(), self.ket.virtual_leg('last').conj(), self.bra.virtual_leg('last')]
-        legv = op.virtual_leg('last').conj()
-        # n_rt = ket.config.sym.add_charges(legv.t[0], signatures=(legv.s,), new_signature=-1)
-        tmp = eye(self.config, legs=legs, isdiag=False)
-        self.F[self.N, self.N - 1] = tmp.add_leg(axis=2, leg=legv)
+        
+        legs = [self.bra.virtual_leg('first'), self.ket.virtual_leg('first').conj(), 
+                op.virtual_leg('first').conj(), 
+                self.ket.virtual_leg('first').conj(), self.bra.virtual_leg('first')]
+        self.F[-1, 0] = ones(self.config, legs=legs, isdiag=False)
+        
+        legs = [self.bra.virtual_leg('last'), self.ket.virtual_leg('last').conj(), 
+                op.virtual_leg('last').conj(), 
+                self.ket.virtual_leg('last').conj(), self.bra.virtual_leg('last')]
+        self.F[self.N, self.N - 1] = ones(self.config, legs=legs, isdiag=False)
 
     def measure(self, bd=(-1, 0)):
         return vdot(self.F[bd], self.F[bd[::-1]], conj=(0, 0)) * self.factor()
