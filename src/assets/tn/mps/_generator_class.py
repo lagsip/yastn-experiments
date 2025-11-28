@@ -25,7 +25,7 @@ import assets.math.operators as opmath
 
 class GenericGenerator:
 
-    def __init__(self, N, operators, map=None, Is=None, parameters=None, opts={"tol": 1e-13}):
+    def __init__(self, N, operators, map=None, Is=None, parameters=None, opts={"tol": 1e-13}, debug=False):
         r"""
         Generator is a convenience class building MPSs from a set of local operators.
 
@@ -49,6 +49,8 @@ class GenericGenerator:
             If None, uses default ``{'sites': [*map.keys()]}``.
         opts: dict
             used if compression is needed. Options passed to :meth:`yastn.linalg.svd_with_truncation`.
+        debug: bool
+            enables debug prints.
         """
         # Notes
         # ------
@@ -81,6 +83,8 @@ class GenericGenerator:
 
         self.opts = opts
 
+        self.debug = debug
+
     def random_seed(self, seed):
         r"""
         Set seed for random number generator used in backend (of self.config).
@@ -112,7 +116,7 @@ class GenericGenerator:
         """
         return random_mpo(self._I, D_total=D_total, sigma=sigma, dtype=dtype, **kwargs)
 
-    def mps_from_latex(self, ltx_str, parameters=None, opts=None, ignore_i=True) -> MpsMpoOBC:
+    def mpo_from_latex(self, ltx_str, parameters=None, opts=None, ignore_i=True, rho2ketbra=False) -> MpsMpoOBC:
         r"""
         Convert latex-like string to yastn.tn.mps MPS.
 
@@ -130,18 +134,24 @@ class GenericGenerator:
         opts: dict
             Options passed to :meth:`yastn.linalg.truncation_mask`.
             It includes information on how to truncate the Schmidt values.
+
+        ignore_i: bool
+            Whether the character i should be replaced by the imaginary unit (and inserted into the parameters)
+
+        rho2ketbra: bool
+            Whether rho should be extracted, resolved into ketbra notation and re-indexed to 2n sites
         """
 
-        c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_i=ignore_i)
-        print("This is c1: \n", c1, "\n")
+        c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_i=ignore_i, rho2ketbra=rho2ketbra)
+        if self.debug: print("This is c1: \n", c1, "\n")
         generated_params = {**self.parameters, **generated_params}
         c2 = latex2term(c1, generated_params)
-        print("This is c2: \n", c2, "\n")
+        if self.debug: print("This is c2: \n", c2, "\n")
         cc_operators = opmath.compl_conjugate(self._ops)
         expanded_ops = dict(self._ops.to_dict(), **cc_operators)
-        print("This is the full list of operators: \n", expanded_ops, "\n")
+        if self.debug: print("This is the full list of operators: \n", expanded_ops, "\n")
         c3 = self.term2generic_term(c2, expanded_ops, generated_params)
-        print("This is c3: \n", c3, "\n")
+        if self.debug: print("This is c3: \n", c3, "\n")
         if opts is None:
             opts={'tol': 5e-15}
         return generate_mpo(self._I, c3, opts)
@@ -181,7 +191,7 @@ class GenericGenerator:
         c3 = self.term2generic_term(templete, self._ops.to_dict(), parameters)
         return generate_mpo(self._I, c3)
 
-    def any2simple_latex(self, ltx_str, parameters, ignore_i=True):
+    def any2simple_latex(self, ltx_str, parameters, ignore_i=True, rho2ketbra=False):
         r"""
         Helper function to rewrite the instruction given as a latex string
         to a simpler string that can be decoded further (see latex2term).
@@ -192,6 +202,12 @@ class GenericGenerator:
             full latex string
         parameters: dict
             dictionary with parameters for the generator
+
+        ignore_i: bool
+            Whether the character i should be replaced by the imaginary unit (and inserted into the parameters)
+
+        rho2ketbra: bool
+            Whether rho should be extracted, resolved into ketbra notation and re-indexed to 2n sites
         """
 
         new_expr = ltx_str
@@ -199,29 +215,31 @@ class GenericGenerator:
 
         # resolve commutators
         new_expr = self.resolve_commutators(new_expr)
-        print("\nResolved Commutators:\n", new_expr)
+        if self.debug: print("\nResolved Commutators:\n", new_expr)
 
-        # extract rho
-        new_expr = self.extract_rho(new_expr)
-        print("\nExtraced Rho:\n", new_expr)
+        if rho2ketbra:
+            # extract rho
+            new_expr = self.extract_rho(new_expr)
+            if self.debug: print("\nExtraced Rho:\n", new_expr)
 
         # rephrase summation
-        new_expr, new_params = self.rewrite_sum(new_expr, parameters, extend_kb_notation=True)
-        print("\nRephrased Sum:\n", new_expr)
+        new_expr, new_params = self.rewrite_sum(new_expr, new_params, extend_kb_notation=rho2ketbra)
+        if self.debug: print("\nRephrased Sum:\n", new_expr)
 
         # rename greek symbols
         new_expr, new_params = self.rename_symbols(new_expr, new_params)
-        print("\nRenamed Symbols:\n", new_expr)
+        if self.debug: print("\nRenamed Symbols:\n", new_expr)
 
         # extract constants
         new_expr, new_params = self.extract_constants(new_expr, new_params, ignore_i=ignore_i)
-        print("\nExtraced constants:\n", new_expr)
+        if self.debug: print("\nExtraced constants:\n", new_expr)
 
-        # resolve ket/bra-marked operators
-        new_expr = self.resolve_ketbra(new_expr)
-        print("\nResolved Ket-Bra-notation:\n", new_expr)
+        if rho2ketbra:
+            # resolve ket/bra-marked operators
+            new_expr = self.resolve_ketbra(new_expr)
+            if self.debug: print("\nResolved Ket-Bra-notation:\n", new_expr)
 
-        print("\nThe extended Parameters:\n", new_params)
+        if self.debug: print("\nThe extended Parameters:\n", new_params)
 
         
         return new_expr, new_params
@@ -561,6 +579,11 @@ class GenericGenerator:
         ----------
         expression: string
             expression as string to rewrite sum in
+        parameters: dict
+            dictionary with parameters for the generator
+
+        extend_kb_notation: bool
+            Whether indices should be double-grouped (i,2i,2i+1) to support ketbra notation
         """
 
         new_expr = expression
@@ -738,6 +761,8 @@ class GenericGenerator:
         ----------
         expression: string
             expression as string to rename symbols in
+        parameters: dict
+            dictionary with parameters for the generator
         """
 
         new_expr = expression
@@ -796,6 +821,11 @@ class GenericGenerator:
         ----------
         expression: string
             expression as string to extract constants from
+        parameters: dict
+            dictionary with parameters for the generator
+
+        ignore_i: bool
+            Whether i should be replaced by the imaginary unit (and inserted into parameters)
         """
 
         new_expr = expression
