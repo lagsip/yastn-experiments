@@ -81,7 +81,11 @@ class Env_double_lindblad(EnvParent_double3_obc):
             tmp = ncon([self.F[n-1, n], self.ket.A[n], self.bra.A[n].conj()], top_axes)
 
             # contracting the ket and bra component of the Lindbladian has been split up into first contracting the ket
-            tmp = ncon([tmp, self.op.A[2*n]], [(-1,-2, 1, 2,-5,-6,-7),( 1,-3,-4, 2)])
+            #tmp = ncon([tmp, self.op.A[2*n]], [(-1,-2, 1, 2,-5,-6,-7),( 1,-3,-4, 2)])
+            
+            tmp = ncon([tmp, self.op.A[2*n], self.op.A[2*n+1]], [(-1,-2,1,2,4,-6,-7),(1,-3,3,2),(3,-4,-5,4)])
+            tmp = ncon([tmp, self.bra.A[n].conj(), self.ket.A[n]], [(1,3,2,4,-3,-4,-5),(1,2,-1,5),(3,4,-2,5)])
+            
 
             # and then the bra
             # the following lines should help elaborate the issue with mismatched signatures
@@ -105,7 +109,7 @@ class Env_double_lindblad(EnvParent_double3_obc):
             # while this one connects only the upper physical leg (3) of the bra with what was the lower physical leg of the A^dag
             #tmp = ncon([tmp, self.op.A[2*n+1]], [(-1,-2,-3,-8, 1,-6,-7),(-9,-4,-5,1)]) # -> but this throws an error
 
-            self.F[n, n+1] = ncon([tmp, self.bra.A[n].conj(),self.ket.A[n]], bot_axes)
+            self.F[n, n+1] = tmp#ncon([tmp, self.bra.A[n].conj(),self.ket.A[n]], bot_axes)
         elif to == 'first':
             top_axes = [( 1, 2,-5,-6,-7),(-2,-3, 2, 3),(-1,-4, 1, 3)]
             mid_axes = [(-1,-2, 1, 2, 3,-6,-7),(-3,-4, 4, 1),( 4,-5, 3, 2)]

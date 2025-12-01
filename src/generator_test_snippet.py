@@ -78,25 +78,21 @@ def test_env_update(config_kwargs, sym='dense', N=4):
     I = mps_fun.product_mpo(ops.I(), N)
     print(I.get_virtual_legs())
     A = mps_fun.random_mpo(I)
+    print("here", A[0])
 
     generate = gen_mps.GenericGenerator(2*N, ops)
     L = generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
-
-
+    for n in range(1,2*N,2):
+        L[n] = L[n].flip_charges(axes=(1,3))
     my_env = env.Env_double_lindblad(A,L,A)
-    print(my_env.F[-1, 0])
-    print(my_env.F[-1, 0].to_numpy())
     assert my_env.F[-1, 0].to_numpy().shape == (1,1,1,1,1)
     assert my_env.F[-1, 0].to_numpy().size == 1
 
-    print(my_env.F[N, N-1])
-    print(my_env.F[N, N-1].to_numpy())
     assert my_env.F[N, N-1].to_numpy().shape == (1,1,1,1,1)
     assert my_env.F[N, N-1].to_numpy().size == 1
-
-
-    my_env.update_env_(0)
-    my_env.update_env_(1)
+    for n in range(N):
+        my_env.update_env_(n)
+        #print(my_env.F[n, n+1])
 
 # lindblad_mpo_latex(config_kwargs=config_kwargs)
 
