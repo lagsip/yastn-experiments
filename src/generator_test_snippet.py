@@ -67,7 +67,39 @@ def test_env(config_kwargs, sym='Z2', N=4):
     #my_env.update_env_(1)
 
 
+def test_env_update(config_kwargs, sym='dense', N=4):
+
+    ops = spin_ops.Spin12(sym=sym, **config_kwargs)
+    ltx_str = r"-i (\sum_{j=0}^{N-1} ([\sigma_j^z, \rho])) + \sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j}^{z} \rho \sigma_{k}^{z} - \frac{1}{2} \{ \sigma_{k}^{z} \sigma_{j}^{z}, \rho \} )"
+    parameters = {"gamma": np.ones([N,N]),
+                  "N": N
+                  }
+    
+    I = mps_fun.product_mpo(ops.I(), N)
+    print(I.get_virtual_legs())
+    A = mps_fun.random_mpo(I)
+
+    generate = gen_mps.GenericGenerator(2*N, ops)
+    L = generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
+
+
+    my_env = env.Env_double_lindblad(A,L,A)
+    print(my_env.F[-1, 0])
+    print(my_env.F[-1, 0].to_numpy())
+    assert my_env.F[-1, 0].to_numpy().shape == (1,1,1,1,1)
+    assert my_env.F[-1, 0].to_numpy().size == 1
+
+    print(my_env.F[N, N-1])
+    print(my_env.F[N, N-1].to_numpy())
+    assert my_env.F[N, N-1].to_numpy().shape == (1,1,1,1,1)
+    assert my_env.F[N, N-1].to_numpy().size == 1
+
+
+    my_env.update_env_(0)
+    my_env.update_env_(1)
+
 # lindblad_mpo_latex(config_kwargs=config_kwargs)
 
-test_env(config_kwargs=config_kwargs)
+# test_env(config_kwargs=config_kwargs)
     
+test_env_update(config_kwargs=config_kwargs)
