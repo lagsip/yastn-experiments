@@ -94,9 +94,11 @@ def test_env_update(config_kwargs, sym='dense', N=4):
         my_env.update_env_(n, to='last')
     # calculate all left-envs
     my_env.setup_(to='last')
-    # TODO: the same for right envs. 
-    #for n in range(N-1,-1,-1):
-    #    my_env.update_env_(n, to='first')
+    # calculate right-envs step by step
+    for n in range(N-1,-1,-1):
+        my_env.update_env_(n, to='first')
+    # calculate all right-envs
+    my_env.setup_(to='first')
 
 # lindblad_mpo_latex(config_kwargs=config_kwargs)
 
