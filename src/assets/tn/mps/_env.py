@@ -74,38 +74,16 @@ class EnvParent_double3_obc(EnvParent_double3):
 class Env_double_lindblad(EnvParent_double3_obc):
 
     def update_env_(self, n, to='last'):
-        if to == 'last':
-            top_axes = [(-1,-2,-3, 1, 2),( 1,-4,-6, 3),( 2,-5,-7, 3)]
-            mid_axes = [(-1,-2, 1, 2, 3,-6,-7),( 1,-3, 4, 2),( 4,-4,-5, 3)]
-            bot_axes = [( 1, 2, 3, 4,-1,-2,-3),( 1, 5,-4, 3),( 2, 5,-5, 4)]
-            tmp = ncon([self.F[n-1, n], self.ket.A[n], self.bra.A[n].conj()], top_axes)
-
-            # contracting the ket and bra component of the Lindbladian has been split up into first contracting the ket
-            tmp = ncon([tmp, self.op.A[2*n]], [(-1,-2, 1, 2,-5,-6,-7),( 1,-3,-4, 2)])
-
-            # and then the bra
-            # the following lines should help elaborate the issue with mismatched signatures
-            # you can uncomment one line for any run to test this
-            # this line is what i had originally
-            #tmp = ncon([tmp, self.op.A[2*n+1].conj()], [(-1,-2,-3, 1, 2,-6,-7),( 1,-4,-5,2)]) # this raises a mismatched signatures exception
-
-            # this line only connects only the left imaginary leg (0) of the bra with what was the right imaginary leg of the ket
-            #tmp = ncon([tmp, self.op.A[2*n+1].conj()], [(-1,-2,-3, 1,-8,-6,-7),( 1,-4,-5,-9)]) # -> throws an error
-            # while this one connects only the upper physical leg (3) of the bra with what was the lower physical leg of the A^dag
-            #tmp = ncon([tmp, self.op.A[2*n+1].conj()], [(-1,-2,-3,-8, 1,-6,-7),(-9,-4,-5,1)]) # -> is fine 
-            # (will throw an error later on because the rest of the code assumes tmp to have 7 legs, not 9. that's simply because the full contraction can't be done)
-            
-            # what you notice is that the reason why the original line throws an exception is that the contraction along the imaginary leg has mismatched signatures (for whatever reason)
-            # however connecting the physical legs works, therefor swapping the signatures (or removing the conjugation) would fix the imaginary contraction,
-            # but cause problems for the physical contraction. So something like this won't work either (i have only removed the .conj(). similar things apply on calling yastn.Tensor flip_signature(a))
-            #tmp = ncon([tmp, self.op.A[2*n+1]], [(-1,-2,-3, 1, 2,-6,-7),( 1,-4,-5,2)]) # this still won't work, because
-
-            # this line only connects only the left imaginary leg (0) of the bra with what was the right imaginary leg of the ket
-            #tmp = ncon([tmp, self.op.A[2*n+1]], [(-1,-2,-3, 1,-8,-6,-7),( 1,-4,-5,-9)]) # -> now this is fine (again, will throw an error later due to too many legs leftover)
-            # while this one connects only the upper physical leg (3) of the bra with what was the lower physical leg of the A^dag
-            #tmp = ncon([tmp, self.op.A[2*n+1]], [(-1,-2,-3,-8, 1,-6,-7),(-9,-4,-5,1)]) # -> but this throws an error
-
-            self.F[n, n+1] = ncon([tmp, self.bra.A[n].conj(),self.ket.A[n]], bot_axes)
+        if to == 'last': # update left-env
+            # contract 'upper' layer A, Adag to the left env
+            axes = [(-1,-2,-3,2,1),(1,-5,-7,3),(2,-4,-6,3)]
+            tmp = ncon([self.F[n-1, n], self.bra[n].conj(), self.ket[n]], axes)
+            # contract operator
+            axes = [(-1,-2,1,2,4,-6,-7),(1,-3,3,2),(3,-4,-5,4)]
+            tmp = ncon([tmp, self.op[2*n], self.op[2*n+1]], axes)
+            # contract 'lower' layer A, Adag
+            axes = [(1,3,2,5,-3,-4,-5),(1,2,-1,4),(3,5,-2,4)]
+            self.F[n, n+1] = ncon([tmp, self.bra.A[n].conj(), self.ket.A[n]], axes)
         elif to == 'first':
             top_axes = [( 1, 2,-5,-6,-7),(-2,-3, 2, 3),(-1,-4, 1, 3)]
             mid_axes = [(-1,-2, 1, 2, 3,-6,-7),(-3,-4, 4, 1),( 4,-5, 3, 2)]
