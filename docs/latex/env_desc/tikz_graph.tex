@@ -1,0 +1,441 @@
+\documentclass{article}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=0cm,right=0cm,marginparwidth=1.75cm]{geometry}
+\geometry{left=0.5in, right=0in}
+\usepackage[T1]{fontenc}
+\usepackage{tikz}
+\usetikzlibrary{calc, positioning, shapes}
+\renewcommand*\oldstylenums[1]{\textosf{#1}}
+\renewcommand\thesubsection{\arabic{section} (\alph{subsection})}
+\renewcommand\thesection{\arabic{section}}
+
+% Useful packages
+\usepackage{textcomp}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\title{Yastn Environment for Lindbladian}
+\author{Tim Klemm}
+\linespread{1.4}
+
+\hypersetup{urlcolor=cyan}
+
+
+\begin{document}
+\section{Structure}
+\subsection{Notice}
+It is important to note, that despite axes being indexed beginning with 0 within yastn, we begin indexing on 1. \newline
+That is because on contracting we beging with -1 for assigning indices for the legs of the contracted tensor.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[draw, shape=circle] (LKet) {$L^{\dag}L_{j,ket}$};
+    \node[draw, shape=circle] (LBra) [right = 2 of LKet.center] {$L^{\dag}L_{j,bra}$};
+    \node[draw, shape=circle] (ATop) [above = 2 of LKet.center] {$A_{j}$};
+    \node[draw, shape=circle] (ADagTop) [above = 3 of LBra.center] {$A_{j}^{\dag}$};
+    \node[draw, shape=circle] (ABot) [below = 2 of LKet.center] {$A_{j}$};
+    \node[draw, shape=circle] (ADagBot) [below = 3 of LBra.center] {$A_{j}^{\dag}$};
+
+    % save the distance between the highest and lowest node to use later for the height of the environment
+    \path let \p1 = ($(ADagTop.center) - (LBra.center)$),
+            \n1 = {veclen(\x1, \y1)} in
+        \pgfextra{\xdef\envheight{\n1}};
+    
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (ADagTop) to [out=90, in=90, looseness=4] 
+        node[pos=0, above left] {4} 
+        node[pos=1, above left] {4} (ATop);
+    \draw[>>->>] (ATop) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {4} (LKet);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, above right] {3} 
+        node[pos=1, below left] {1} (LBra);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {4} (ABot);
+    \draw[>>->>] (ABot) to [out=270, in=270, looseness=4] 
+        node[pos=0, below right] {2} 
+        node[pos=1, below right] {2} (ADagBot);
+    \draw[>>->>] (ADagBot) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {2} (LBra);
+    \draw[>>->>] (LBra) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {2} (ADagTop);
+    
+    % draw connections to left environment
+    \draw[>>->>] (Left.east |- ADagTop) -- 
+        node[pos=0, below left] {5} 
+        node[pos=1, below left] {1} (ADagTop);
+    \draw[>>->>] (Left.east |- ATop) -- 
+        node[pos=0, below left] {4} 
+        node[pos=1, below left] {1} (ATop);
+    \draw[>>->>] [thick] (Left.east |- LKet) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, below left] {1} (LKet);
+    \draw[>>->>] (Left.east |- ABot) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {1} (ABot);
+    \draw[>>->>] (Left.east |- ADagBot) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {1} (ADagBot);
+    
+    % draw connections to right environment
+    \draw[>>->>] (ADagTop) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {1} (ADagTop -| Right.west);
+    \draw[>>->>] (ATop) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {2} (ATop -| Right.west);
+    \draw[>>->>] [thick] (LBra) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {3} (LBra -| Right.west);
+    \draw[>>->>] (ABot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {4} (ABot -| Right.west);
+    \draw[>>->>] (ADagBot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {5} (ADagBot -| Right.west);
+\end{tikzpicture}
+
+\subsection{Left side contraction}
+
+First the 'upper' Tensors are contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[draw, shape=circle] (LKet) {$L^{\dag}L_{j,ket}$};
+    \node[draw, shape=circle] (LBra) [right = 2 of LKet.center] {$L^{\dag}L_{j,bra}$};
+    \node[draw, shape=rectangle, minimum width = 6cm, minimum height = 2cm] (Contracted) [above = 1.5 of LKet.center] {};
+    \node[] (ATop) [above = 2 of LKet.center] {};
+    \node[] (ADagTop) [above = 3 of LBra.center] {};
+    \node[draw, shape=circle] (ABot) [below = 2 of LKet.center] {$A_{j}$};
+    \node[draw, shape=circle] (ADagBot) [below = 3 of LBra.center] {$A_{j}^{\dag}$};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (Contracted.south -| LKet) to 
+        node[pos=0, below right] {4} 
+        node[pos=1, above left] {4} (LKet);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, above right] {3} 
+        node[pos=1, below left] {1} (LBra);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {4} (ABot);
+    \draw[>>->>] (ABot) to [out=270, in=270, looseness=4] 
+        node[pos=0, below right] {2} 
+        node[pos=1, below right] {2} (ADagBot);
+    \draw[>>->>] (ADagBot) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {2} (LBra);
+    \draw[>>->>] (LBra) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {5} (LBra |- Contracted.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] [thick] (Left.east |- LKet) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, below left] {1} (LKet);
+    \draw[>>->>] (Left.east |- ABot) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {1} (ABot);
+    \draw[>>->>] (Left.east |- ADagBot) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {1} (ADagBot);
+    
+    % draw connections to right environment
+    \draw[>>->>] (ADagTop -| Contracted.east) -- 
+        node[pos=0, above right] {7} 
+        node[pos=1, above right] {1} (ADagTop -| Right.west);
+    \draw[>>->>] (ATop -| Contracted.east) -- 
+        node[pos=0, above right] {6} 
+        node[pos=1, above right] {2} (ATop -| Right.west);
+    \draw[>>->>] [thick] (LBra) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {3} (LBra -| Right.west);
+    \draw[>>->>] (ABot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {4} (ABot -| Right.west);
+    \draw[>>->>] (ADagBot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {5} (ADagBot -| Right.west);
+\end{tikzpicture}
+
+Then the Lindbladian Components are contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[] (LKet) {};
+    \node[] (LBra) [right = 2 of LKet.center] {};
+    \node[draw, shape=rectangle, minimum width = 6cm, minimum height = 4cm] (Contracted) [above = -.5 of LKet.center] {};
+    \node[] (ATop) [above = 2 of LKet.center] {};
+    \node[] (ADagTop) [above = 3 of LBra.center] {};
+    \node[draw, shape=circle] (ABot) [below = 2 of LKet.center] {$A_{j}$};
+    \node[draw, shape=circle] (ADagBot) [below = 3 of LBra.center] {$A_{j}^{\dag}$};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (Contracted.south -| ABot) to 
+        node[pos=0, below right] {3} 
+        node[pos=1, above left] {4} (ABot);
+    \draw[>>->>] (ABot) to [out=270, in=270, looseness=4] 
+        node[pos=0, below right] {2} 
+        node[pos=1, below right] {2} (ADagBot);
+    \draw[>>->>] (ADagBot) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {4} (ADagBot |- Contracted.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] (Left.east |- ABot) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {1} (ABot);
+    \draw[>>->>] (Left.east |- ADagBot) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {1} (ADagBot);
+    
+    % draw connections to right environment
+    \draw[>>->>] (ADagTop -| Contracted.east) -- 
+        node[pos=0, above right] {7} 
+        node[pos=1, above right] {1} (ADagTop -| Right.west);
+    \draw[>>->>] (ATop -| Contracted.east) -- 
+        node[pos=0, above right] {6} 
+        node[pos=1, above right] {2} (ATop -| Right.west);
+    \draw[>>->>] [thick] (LBra -| Contracted.east) -- 
+        node[pos=0, above right] {5} 
+        node[pos=1, above right] {3} (LBra -| Right.west);
+    \draw[>>->>] (ABot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {4} (ABot -| Right.west);
+    \draw[>>->>] (ADagBot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {5} (ADagBot -| Right.west);
+\end{tikzpicture}
+
+And lastly the 'lower' Tensors are contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[] (LKet) {};
+    \node[] (LBra) [right = 2 of LKet.center] {};
+    \node[draw, shape=rectangle, minimum width = 6cm, minimum height = 7cm] (Contracted) [above = -3.5 of LKet.center] {};
+    \node[] (ATop) [above = 2 of LKet.center] {};
+    \node[] (ADagTop) [above = 3 of LBra.center] {};
+    \node[] (ABot) [below = 2 of LKet.center] {};
+    \node[] (ADagBot) [below = 3 of LBra.center] {};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    
+    % draw connections to left environment
+    
+    % draw connections to right environment
+    \draw[>>->>] (ADagTop -| Contracted.east) -- 
+        node[pos=0, above right] {5} 
+        node[pos=1, above right] {1} (ADagTop -| Right.west);
+    \draw[>>->>] (ATop -| Contracted.east) -- 
+        node[pos=0, above right] {4} 
+        node[pos=1, above right] {2} (ATop -| Right.west);
+    \draw[>>->>] [thick] (LBra -| Contracted.east) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {3} (LBra -| Right.west);
+    \draw[>>->>] (ABot -| Contracted.east) -- 
+        node[pos=0, above right] {2} 
+        node[pos=1, above right] {4} (ABot -| Right.west);
+    \draw[>>->>] (ADagBot -| Contracted.east) -- 
+        node[pos=0, above right] {1} 
+        node[pos=1, above right] {5} (ADagBot -| Right.west);
+\end{tikzpicture}
+
+\subsection{Right side contraction}
+
+First the 'upper' Tensors are contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[draw, shape=circle] (LKet) {$L^{\dag}L_{j,ket}$};
+    \node[draw, shape=circle] (LBra) [right = 2 of LKet.center] {$L^{\dag}L_{j,bra}$};
+    \node[draw, shape=rectangle, minimum width = 6cm, minimum height = 2cm] (Contracted) [above = 1.5 of LBra.center] {};
+    \node[] (ATop) [above = 2 of LKet.center] {};
+    \node[] (ADagTop) [above = 3 of LBra.center] {};
+    \node[draw, shape=circle] (ABot) [below = 2 of LKet.center] {$A_{j}$};
+    \node[draw, shape=circle] (ADagBot) [below = 3 of LBra.center] {$A_{j}^{\dag}$};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (Contracted.south -| LKet) to 
+        node[pos=0, below right] {3} 
+        node[pos=1, above left] {4} (LKet);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, above right] {3} 
+        node[pos=1, below left] {1} (LBra);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {4} (ABot);
+    \draw[>>->>] (ABot) to [out=270, in=270, looseness=4] 
+        node[pos=0, below right] {2} 
+        node[pos=1, below right] {2} (ADagBot);
+    \draw[>>->>] (ADagBot) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {2} (LBra);
+    \draw[>>->>] (LBra) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {4} (LBra |- Contracted.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] (ADagTop -| Left.east) -- 
+        node[pos=0, below left] {5} 
+        node[pos=1, above right] {1} (ADagTop -| Contracted.west);
+    \draw[>>->>] (ATop -| Left.east) -- 
+        node[pos=0, below left] {4} 
+        node[pos=1, above right] {2} (ATop -| Contracted.west);
+    \draw[>>->>] [thick] (Left.east |- LKet) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, below left] {1} (LKet);
+    \draw[>>->>] (Left.east |- ABot) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {1} (ABot);
+    \draw[>>->>] (Left.east |- ADagBot) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {1} (ADagBot);
+    
+    % draw connections to right environment
+    \draw[>>->>] [thick] (LBra) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {5} (LBra -| Right.west);
+    \draw[>>->>] (ABot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {6} (ABot -| Right.west);
+    \draw[>>->>] (ADagBot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {7} (ADagBot -| Right.west);
+\end{tikzpicture}
+
+Then the Lindbladian Components are contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[] (LKet) {};
+    \node[] (LBra) [right = 2 of LKet.center] {};
+    \node[draw, shape=rectangle, minimum width = 6cm, minimum height = 4cm] (Contracted) [above = -.5 of LBra.center] {};
+    \node[] (ATop) [above = 2 of LKet.center] {};
+    \node[] (ADagTop) [above = 3 of LBra.center] {};
+    \node[draw, shape=circle] (ABot) [below = 2 of LKet.center] {$A_{j}$};
+    \node[draw, shape=circle] (ADagBot) [below = 3 of LBra.center] {$A_{j}^{\dag}$};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (Contracted.south -| ABot) to 
+        node[pos=0, below right] {4} 
+        node[pos=1, above left] {4} (ABot);
+    \draw[>>->>] (ABot) to [out=270, in=270, looseness=4] 
+        node[pos=0, below right] {2} 
+        node[pos=1, below right] {2} (ADagBot);
+    \draw[>>->>] (ADagBot) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {5} (ADagBot |- Contracted.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] (ADagTop -| Left.east) -- 
+        node[pos=0, below left] {5} 
+        node[pos=1, above right] {1} (ADagTop -| Contracted.west);
+    \draw[>>->>] (ATop -| Left.east) -- 
+        node[pos=0, below left] {4} 
+        node[pos=1, above right] {2} (ATop -| Contracted.west);
+    \draw[>>->>] [thick] (LBra -| Left.east) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, above right] {3} (LBra -| Contracted.west);
+    \draw[>>->>] (Left.east |- ABot) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {1} (ABot);
+    \draw[>>->>] (Left.east |- ADagBot) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {1} (ADagBot);
+    
+    % draw connections to right environment
+    \draw[>>->>] (ABot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {6} (ABot -| Right.west);
+    \draw[>>->>] (ADagBot) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {7} (ADagBot -| Right.west);
+\end{tikzpicture}
+
+And lastly the 'lower' Tensors are contracted
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[] (LKet) {};
+    \node[] (LBra) [right = 2 of LKet.center] {};
+    \node[draw, shape=rectangle, minimum width = 6cm, minimum height = 7cm] (Contracted) [above = -3.5 of LBra.center] {};
+    \node[] (ATop) [above = 2 of LKet.center] {};
+    \node[] (ADagTop) [above = 3 of LBra.center] {};
+    \node[] (ABot) [below = 2 of LKet.center] {};
+    \node[] (ADagBot) [below = 3 of LBra.center] {};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    
+    % draw connections to left environment
+    
+    % draw connections to right environment
+    \draw[>>->>] (ADagTop -| Left.east) -- 
+        node[pos=0, below left] {5} 
+        node[pos=1, above right] {1} (ADagTop -| Contracted.west);
+    \draw[>>->>] (ATop -| Left.east) -- 
+        node[pos=0, below left] {4} 
+        node[pos=1, above right] {2} (ATop -| Contracted.west);
+    \draw[>>->>] [thick] (LBra -| Left.east) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, above right] {3} (LBra -| Contracted.west);
+    \draw[>>->>] (ABot -| Left.east) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, above right] {4} (ABot -| Contracted.west);
+    \draw[>>->>] (ADagBot -| Left.east) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, above right] {5} (ADagBot -| Contracted.west);
+\end{tikzpicture}
+
+
+\end{document}
+
