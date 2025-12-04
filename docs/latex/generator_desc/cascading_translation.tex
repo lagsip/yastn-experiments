@@ -1,0 +1,97 @@
+\documentclass{article}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=0cm,right=0cm,marginparwidth=1.75cm]{geometry}
+\geometry{left=0.5in, right=0.5in}
+\usepackage[T1]{fontenc}
+\usepackage{tikz}
+\usetikzlibrary{calc, positioning, shapes}
+\renewcommand*\oldstylenums[1]{\textosf{#1}}
+
+% Useful packages
+\usepackage{textcomp}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\title{Cascading translation for Lindbladian Generator}
+\author{Tim Klemm}
+\linespread{1.4}
+
+\hypersetup{urlcolor=cyan}
+
+
+\begin{document}
+\section{Structure}
+\subsection{Input}
+
+\subsubsection{Latex String (kw: ltx\_str)}
+The Lindbladian as a Latex string in some form \newline
+e.g.
+\newline \begin{math}
+-i {\sum_{j=0}^{N-1} ([\sigma_{j}^{z}, \rho])} 
++ {\sum_{i,j = 0}^{N-1} \gamma_{i,j} (\sigma_{i}^{z} \rho \sigma_{j}^{z} - \frac{1}{2} \{ \sigma_{j}^{z} \sigma_{i}^{z}, \rho \} )}
+\end{math} \newline
+or 
+\newline \begin{math}
+-i {\sum_{j=0}^{N-1} (\sigma_{j,ket}^{z} - \sigma_{j,bra}^{z})} 
++ {\sum_{i,j = 0}^{N-1} \gamma_{i,j} (\sigma_{i,ket}^{z} \sigma_{j,bra}^{z} - \frac{1}{2} ( \sigma_{j,ket}^{z} \sigma_{i,ket}^{z} + \sigma_{j,bra}^{z} \sigma_{i,bra}^{z} ) )}
+\end{math} \newline
+\dots
+\subsubsection{Parameters (kw: params)}
+Any parameters that occur in the Latex string are defined here. \newline
+e.g. \newline
+\{"t": t, \newline
+"mu": mu, \newline
+"sites": list(range(N)), \newline
+"NN": [(i, i+1) for i in range(N-1)]\}
+
+\subsection{Output}
+A yastn.Mps object is returned
+
+\subsubsection{Procedure}
+Perform a series of translation of latex formulas until the \_latex2term can handle it, 
+all while expanding the formula and parameters accordingly during the process \newline
+Start with
+\newline \begin{math}
+-i \sum_{j=0}^{N-1} ([\sigma_{j}^{z}, \rho])
++ \sum_{i,j = 0}^{N-1} \gamma_{i,j} (\sigma_{i}^{z} \rho \sigma_{j}^{z} - \frac{1}{2} \{ \sigma_{j}^{z} \sigma_{i}^{z}, \rho \} )
+\end{math} \newline
+resolve commutators
+\newline \begin{math}
+-i \sum_{j=0}^{N-1} (\sigma_{j}^{z}\rho - \rho\sigma_{j}^{z})
++ \sum_{i,j = 0}^{N-1} \gamma_{i,j} (\sigma_{i}^{z} \rho \sigma_{j}^{z} - \frac{1}{2} ( \sigma_{j}^{z} \sigma_{i}^{z}\rho + \rho\sigma_{j}^{z} \sigma_{i}^{z} ) )
+\end{math} \newline
+extract %\rho
+\newline \begin{math}
+-i \sum_{j=0}^{N-1} (\sigma_{j,ket}^{z} - \sigma_{j,bra}^{z})
++ \sum_{i,j = 0}^{N-1} \gamma_{i,j} (\sigma_{i,ket}^{z} \sigma_{j,bra}^{z} - \frac{1}{2} ( \sigma_{j,ket}^{z} \sigma_{i,ket}^{z} + \sigma_{j,bra}^{z} \sigma_{i,bra}^{z} ) )
+\end{math} \newline
+rephrase summation
+\newline \begin{math}
+-i \sum_{j,jk,jb \in 1range0toN-1} (\sigma_{j,ket}^{z} - \sigma_{j,bra}^{z})
++ \sum_{i,j,ij,ib,jk,jb \in 2range0toN-1} \gamma_{i,j} (\sigma_{i,ket}^{z} \sigma_{j,bra}^{z} - \frac{1}{2} ( \sigma_{j,ket}^{z} \sigma_{i,ket}^{z} + \sigma_{j,bra}^{z} \sigma_{i,bra}^{z} ) )
+\end{math} \newline
+rename (greek) symbols (modify parameters)
+\newline \begin{math}
+-i \sum_{j,jk,jb \in 1range0toN-1} (z_{j,ket} - z_{j,bra})
++ \sum_{i,j,ij,ib,jk,jb \in 2range0toN-1} gamma_{i,j} (z_{i,ket} z_{j,bra} - \frac{1}{2} ( z_{j,ket} z_{i,ket} + z_{j,bra} z_{i,bra} ) )
+\end{math} \newline
+extract constants (added to params)
+\newline \begin{math}
+-imun \sum_{j,jk,jb \in 1range0toN-1} (z_{j,ket} - z_{j,bra})
++ \sum_{i,j,ij,ib,jk,jb \in 2range0toN-1} gamma_{i,j} (z_{i,ket} z_{j,bra} - 1div2 ( z_{j,ket} z_{i,ket} + z_{j,bra} z_{i,bra} ) )
+\end{math} \newline
+resolve ket/bra-marked operators by removing notation and complex conjugating bra-marked ops 
+(and adding respective operators to parameters)
+\newline \begin{math}
+-imun \sum_{j,jk,jb \in 1range0toN-1} (z_{jk} - zcc_{jb})
++ \sum_{i,j,ij,ib,jk,jb \in 2range0toN-1} gamma_{i,j} (z_{ik} zcc_{jb} - 1div2 ( z_{jk} z_{ik} + zcc_{jb} zcc_{ib} ) )
+\end{math} \newline
+where with the help of a a cConjugate(op) method $zcc_j = cConjugate(z)_j = z_j^*$. \newline
+\newline
+which should then yield the respective output through the latex2term-, term2HTerm- and generate\_mpo-methods
+
+
+\end{document}
