@@ -21,6 +21,8 @@ from yastn import eye, ones, tensordot, ncon, vdot, qr, svd, Tensor, YastnError
 # from yastn.tn.mps import MpsMpoOBC, MpoPBC
 from yastn.tn.mps._env import EnvParent
 
+from yastn.tn.mps._mps_obc import multiply
+
 
 
 class EnvParent_double3(EnvParent):
@@ -49,7 +51,10 @@ class EnvParent_double3(EnvParent):
 class EnvParent_double3_obc(EnvParent_double3):
 
     def __init__(self, bra, op, ket):
-        super().__init__(bra, op, ket)
+        opcc = op.copy()
+        for n in range(1,op.N):
+            opcc[n] = op[n].conj_blocks()
+        super().__init__(bra, multiply(opcc, op), ket)
         
         legs = [self.bra.virtual_leg('first'), self.ket.virtual_leg('first').conj(), 
                 op.virtual_leg('first').conj(), 
