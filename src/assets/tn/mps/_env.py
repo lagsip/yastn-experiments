@@ -87,12 +87,12 @@ class Env_double_lindblad(EnvParent_double3_obc):
         elif to == 'first':
             # contract 'upper' layer A, Adag to the right env
             axes = [(1,2,-5,-6,-7),(-1,-3,1,3),(-2,-4,2,3)]
-            tmp = ncon([self.F[n+1, n], self.bra.A[n].conj(), self.ket.A[n]], axes)
+            tmp = ncon([self.F[n+1, n], self.bra[n].conj(), self.ket[n]], axes)
             # contract operator
             axes = [(-1,-2,2,4,1,-6,-7),(-3,-4,3,4),(3,-5,1,2)]
-            tmp = ncon([tmp, self.op.A[2*n], self.op.A[2*n+1]], axes)
+            tmp = ncon([tmp, self.op[2*n], self.op[2*n+1]], axes)
             # contract 'lower' layer A, Adag
-            axes = [(-1,-2,-3,5,2,3,1),(-5,4,1,2),(-4,4,3,5)]
+            axes = [(-1,-2,-3,2,5,3,1),(-5,2,1,4),(-4,5,3,4)]
             self.F[n, n-1] = ncon([tmp, self.bra.A[n].conj(), self.ket.A[n]], axes)
 
     def Heff1(self, A, n):
