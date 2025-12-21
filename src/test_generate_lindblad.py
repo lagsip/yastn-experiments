@@ -4,9 +4,11 @@ import assets.tn.mps._generator_class as gen_mps
 import yastn.operators._spin12 as spin_ops
 
 def get_primitive(parameters):
+    """
+    Write the Lindladian by hand using a series of Hterms. 
+    """
     N = parameters["N"]
     gamma = parameters["gamma"]
-    assert len(gamma) == N
     # input operators
     ops = spin_ops.Spin12(sym=sym, **config_kwargs)
     z = ops.z()

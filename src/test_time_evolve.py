@@ -6,19 +6,29 @@ import yastn.operators._spin12 as spin_ops
 
 
 def rho_test(N, dir='x'):
+    """
+    Generate initial state ``rho" as eigenstate of direction ``dir" 
+    and get identity matrix ``id" for calculating overlaps. 
+
+    Returns:
+        rho, id:  yastn.tn.mps.Mps
+    """
     ops = spin_ops.Spin12(sym=sym, **config_kwargs)
     
+    # get direction of the initial state
     if dir == 'x':
         vec = ops.vec_x(1)
     elif dir == 'z':
         vec = ops.vec_z(1)
 
+    # generate rho
     vec_list = []
     for _ in range(N):
         vec_list.append(vec)
         vec_list.append(vec.conj())
     rho = mps.product_mps(vec_list)
 
+    # construct identity matrix
     t1 = yastn.Tensor(config=vec.config, s=rho[0].s)
     t1.set_block(Ds=(1,2,2), val=[[1,0],[0,1]])
     t2 = yastn.Tensor(config=vec.config, s=rho[1].s)
@@ -27,9 +37,13 @@ def rho_test(N, dir='x'):
     for n in range(N):
         id[2*n] = t1
         id[2*n+1] = t2
+    
     return rho, id
 
 def get_primitive(parameters):
+    """
+    Write the Lindladian by hand using a series of Hterms. 
+    """
     N = parameters["N"]
     gamma = parameters["gamma"]
     assert len(gamma) == N
@@ -74,6 +88,10 @@ def lindblad_mpo_latex(ltx_str, parameters, config_kwargs = {"backend": "np"},
     return generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
 
 def time_evolve(rho, L, tmax, dt):
+    """
+    Time evolution of the ``rho" under lindbladian ``L". 
+    Evolution should be understood as: ``rho(t) = expm(time * L) @ rho(0)"
+    """
     times = np.arange(0, tmax+dt/2, dt)
     method = '2site'
     opts_svd = {"tol": 1e-10, "D_total": 32}
@@ -87,7 +105,7 @@ if __name__ == '__main__':
     config_kwargs = {"backend": "np"}
     sym = 'dense'
     # model settings
-    N, temp = 2, 1
+    N, temp = 4, 1
     h = np.ones(N) * 0
     gamma = np.diag(np.ones(N)) * 1
 
@@ -110,9 +128,10 @@ if __name__ == '__main__':
     ltx_str = r"\sum_{j=0}^{N-1} \sigma_j^x \rho"
     Mx = lindblad_mpo_latex(ltx_str, {"N": N}) / N
 
-    lind = mpo1
-    rho, id = rho_test(N, dir = 'x')
-    tmax, dt = 1, 0.1
+    lind, dir = mpo1, 'x'
+    print("Initial state is aligned with the polatization", dir)
+    rho, id = rho_test(N, dir)
+    tmax, dt = 3, 0.1
 
     tol= 1e-12
     for step in time_evolve(rho, lind, tmax, dt):
@@ -128,6 +147,16 @@ if __name__ == '__main__':
         mz = mps.measure_mpo(rho, Mz, id) / norm # average magnetization
         mx = mps.measure_mpo(rho, Mx, id) / norm # average magnetization
         
+        tmp = mz if dir == 'x' else mx
+        assert abs(tmp) < tol # orthogonal magnetization always zero
+
+        if dir == 'z':
+            assert abs(tmp -  1) < tol # if aligned with 'z', the magnetization stays the same
+
+        if dir == 'z':
+            assert abs(conv) < tol # if aligned with 'z', is steady state
+
+
         print("time: ", round(step.ti, 2), round(step.tf, 2), 
               "M: ", round(np.real(mz), 4), round(np.real(mx), 4),
               "conv: ", conv)
