@@ -17,7 +17,7 @@ def lindblad_mpo_latex(config_kwargs, sym='dense', N=4, gamma=np.ones([4,4])):
 
     ltx_str_full = r"-i (\sum_{j=0}^{N-1} ([\sigma_j^z, \rho])) + \sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j}^{z} \rho \sigma_{k}^{z} - \frac{1}{2} \{ \sigma_{k}^{z} \sigma_{j}^{z}, \rho \} )"
     ltx_str_alt = r"-i {\sum_{j=0}^{N-1} (\sigma_{j,ket}^{z} - \sigma_{j,bra}^{z})} + {\sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j,ket}^{z} \sigma_{k,bra}^{z} - \frac{1}{2} ( \sigma_{k,ket}^{z} \sigma_{j,ket}^{z} + \sigma_{k,bra}^{z} \sigma_{j,bra}^{z} ) )}"
-    ltx_str_simple = r"-imun (\sum_{j,jk,jb \in Nx} (z_{jk} - zcc_{jb})) + \sum_{j,k,jk,jb,kk,kb \in NxN} gamma_{j,k} (z_{j} zcc_{k} - 1.0div2.0 ( z_{k} z_{j} + zcc_{k} zcc_{j} ) )"
+    ltx_str_simple = r"-imun (\sum_{j,jk,jb \in Nx} (z_{jk} - zcc_{jb})) + \sum_{j,k,jk,jb,kk,kb \in NxN} gamma_{j,k} (z_{jk} zcc_{kb} - 1.0div2.0 ( z_{kk} z_{jk} + zcc_{kb} zcc_{jb} ) )"
     parameters = {"\\gamma": gamma,
                   "N": N,
                   # "imun": 1j,
@@ -81,8 +81,7 @@ def test_env_update(config_kwargs, sym='dense', N=4):
     
     generate = gen_mps.GenericGenerator(2*N, ops)
     L = generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
-    for n in range(1,2*N,2):
-        L[n] = L[n].flip_charges(axes=(1,3))
+    
     my_env = env.Env_double_lindblad(A,L,A)
     # check if edge envs make sense
     assert my_env.F[-1, 0].to_numpy().shape == (1,1,1,1,1)
@@ -100,8 +99,8 @@ def test_env_update(config_kwargs, sym='dense', N=4):
     # calculate all right-envs
     my_env.setup_(to='first')
 
-# lindblad_mpo_latex(config_kwargs=config_kwargs)
+lindblad_mpo_latex(config_kwargs=config_kwargs)
 
-# test_env(config_kwargs=config_kwargs)
-    
+test_env(config_kwargs=config_kwargs)
+
 test_env_update(config_kwargs=config_kwargs)
