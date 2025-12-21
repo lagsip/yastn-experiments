@@ -61,22 +61,24 @@ class GenericGenerator:
         # * Write sumation over indicies `j0,j1` taking values from 2D-array `listA` as `\sum_{j0,j1 \in listA}`.
         # * In an expression only round brackets, i.e., ().
         self.N = N
-        self._ops = operators
+        cc_operators = opmath.compl_conjugate(operators)
+        self._ops = dict(operators.to_dict(), **cc_operators)
+        
         self._map = {i: i for i in range(N)} if map is None else map
         if len(self._map) != N or sorted(self._map.values()) != list(range(N)):
             raise YastnError("MPS: Map is inconsistent with mps of N sites.")
-        self._Is = {k: 'I' for k in self._map.keys()} if Is is None else Is
+        
+        self._Is = {k: 'I' if k%2==0 else 'Icc' for k in self._map.keys()} if Is is None else Is
         if self._Is.keys() != self._map.keys():
             raise YastnError("MPS: Is is inconsistent with map.")
-        if not all(hasattr(self._ops, v) and callable(getattr(self._ops, v)) for v in self._Is.values()):
+        if not all(v in self._ops and callable(self._ops[v]) for v in self._Is.values()):
             raise YastnError("MPS: operators do not contain identity specified in Is.")
-
         self._I = Mps(self.N)
         for label, site in self._map.items():
-            local_I = getattr(self._ops, self._Is[label])
-            self._I.A[site] = local_I().add_leg(axis=0, s=-1).add_leg(axis=2, s=1)
+            local_I = self._ops[self._Is[label]]
+            self._I.A[site] = local_I(site).add_leg(axis=0, s=-1).add_leg(axis=2, s=1)
 
-        self.config = self._I.A[0].config
+        self.config = self._I[0].config
         self.parameters = {} if parameters is None else parameters
         self.parameters["minus"] = -float(1.0)
         self.parameters["1j"] = 1j
@@ -141,23 +143,22 @@ class GenericGenerator:
         rho2ketbra: bool
             Whether rho should be extracted, resolved into ketbra notation and re-indexed to 2n sites
         """
-
         c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_i=ignore_i, rho2ketbra=rho2ketbra)
         if self.debug: print("This is c1: \n", c1, "\n")
         generated_params = {**self.parameters, **generated_params}
         c2 = latex2term(c1, generated_params)
         if self.debug: print("This is c2: \n", c2, "\n")
-        cc_operators = opmath.compl_conjugate(self._ops)
-        expanded_ops = dict(self._ops.to_dict(), **cc_operators)
+        #cc_operators = opmath.compl_conjugate(self._ops)
+        expanded_ops = self._ops #dict(self._ops.to_dict(), **cc_operators)
         if self.debug: print("This is the full list of operators: \n", expanded_ops, "\n")
         c3 = self.term2generic_term(c2, expanded_ops, generated_params)
         if self.debug: print("This is c3: \n", c3, "\n")
         if opts is None:
             opts={'tol': 5e-15}
+        #print("GEEN")
+        #for c in c3:
+        #    print("\n", c.amplitude * c.operators[0].to_numpy())
         return generate_mpo(self._I, c3, opts)
-
-
-
         # parameters = {**self.parameters, **parameters}
         # c2 = latex2term(ltx_str, parameters)
         # print("This is c2: \n", c2, "\n")
@@ -999,7 +1000,8 @@ class GenericGenerator:
                 else:
                     # the only other option is that is a number, imaginary number is in self.obj_number
                     amplitude *= float(element)
-            Hterm_list.append(Hterm(amplitude, positions, operators))
+            if abs(amplitude) > 0:
+                Hterm_list.append(Hterm(amplitude, positions, operators))
         return Hterm_list
 
     def split_ltx2terms(self, ltx_str, index=0, start_layer=0, max_terms=-1,
