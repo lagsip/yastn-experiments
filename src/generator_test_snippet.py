@@ -82,6 +82,13 @@ def test_env_update(config_kwargs, sym='dense', N=4):
     generate = gen_mps.GenericGenerator(2*N, ops)
     L = generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
     
+    Ldag = L.conjugate_transpose()
+    tmp = Ldag @ L
+    print(tmp.get_bond_dimensions())
+    tmp.canonize_(to="first", normalize=False)
+    tmp.truncate_(to="last", opts_svd={"tol": 1e-9, "D_total": 256}, normalize=False)
+    print(tmp.get_bond_dimensions())
+
     my_env = env.Env_double_lindblad(A,L,A)
     # check if edge envs make sense
     assert my_env.F[-1, 0].to_numpy().shape == (1,1,1,1,1)
@@ -99,8 +106,8 @@ def test_env_update(config_kwargs, sym='dense', N=4):
     # calculate all right-envs
     my_env.setup_(to='first')
 
-lindblad_mpo_latex(config_kwargs=config_kwargs)
+#lindblad_mpo_latex(config_kwargs=config_kwargs)
 
-test_env(config_kwargs=config_kwargs)
+#test_env(config_kwargs=config_kwargs)
 
 test_env_update(config_kwargs=config_kwargs)
