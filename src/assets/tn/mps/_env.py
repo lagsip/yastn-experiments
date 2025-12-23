@@ -51,10 +51,8 @@ class EnvParent_double3(EnvParent):
 class EnvParent_double3_obc(EnvParent_double3):
 
     def __init__(self, bra, op, ket):
-        opcc = op.copy()
-        for n in range(1,op.N):
-            opcc[n] = op[n].conj_blocks()
-        super().__init__(bra, multiply(opcc, op), ket)
+
+        super().__init__(bra, op, ket)
         
         legs = [self.bra.virtual_leg('first'), self.ket.virtual_leg('first').conj(), 
                 op.virtual_leg('first').conj(), 
@@ -100,7 +98,12 @@ class Env_double_lindblad(EnvParent_double3_obc):
             axes = [(-1,-2,-3,2,5,3,1),(-5,2,1,4),(-4,5,3,4)]
             self.F[n, n-1] = ncon([tmp, self.bra.A[n].conj(), self.ket.A[n]], axes)
 
-    def Heff1(self, A, n):
+    def Heff1(self, AdagA, n):
+        FL = self.F[n - 1, n]
+        FR = self.F[n + 1, n]
+        op1, op2 = self.op[2*n], self.op[2*n+1]
+        # TODO implement effective opperator, i.e. incomplete contraction on tikz_graph p.3 upper pannel
+
         # tmp = A @ self.F[n + 1, n]
         # tmp = tensordot(self.op.A[n], tmp, axes=((2, 3), (3, 1)))
         # tmp = tensordot(self.F[n - 1, n], tmp, axes=((0, 1), (2, 0)))

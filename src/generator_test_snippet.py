@@ -76,30 +76,31 @@ def test_env_update(config_kwargs, sym='dense', N=4):
                   }
     
     I = mps_fun.product_mpo(ops.I(), N)
-    print(I.get_virtual_legs())
     A = mps_fun.random_mpo(I)
     
     generate = gen_mps.GenericGenerator(2*N, ops)
     L = generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
     
     Ldag = L.conjugate_transpose()
-    tmp = Ldag @ L
-    print(tmp.get_bond_dimensions())
-    tmp.canonize_(to="first", normalize=False)
-    tmp.truncate_(to="last", opts_svd={"tol": 1e-9, "D_total": 256}, normalize=False)
-    print(tmp.get_bond_dimensions())
+    LL = Ldag @ L
+    print("LL before trunc:", LL.get_bond_dimensions())
+    LL.canonize_(to="first", normalize=False)
+    LL.truncate_(to="last", opts_svd={"tol": 1e-9, "D_total": 256}, normalize=False)
+    print("LL after trunc:", LL.get_bond_dimensions())
 
-    my_env = env.Env_double_lindblad(A,L,A)
+    my_env = env.Env_double_lindblad(A,LL,A)
     # check if edge envs make sense
     assert my_env.F[-1, 0].to_numpy().shape == (1,1,1,1,1)
     assert my_env.F[-1, 0].to_numpy().size == 1
     assert my_env.F[N, N-1].to_numpy().shape == (1,1,1,1,1)
     assert my_env.F[N, N-1].to_numpy().size == 1
+
     # calculate left-envs step by step
     for n in range(N):
         my_env.update_env_(n, to='last')
     # calculate all left-envs
     my_env.setup_(to='last')
+
     # calculate right-envs step by step
     for n in range(N-1,-1,-1):
         my_env.update_env_(n, to='first')
