@@ -93,7 +93,7 @@ if __name__ == '__main__':
     tol = 1e-12
     # check by ||Ldag L||^2 norm, should be the same
     assert abs(mpo1.norm() - ref.norm()) < tol
-    assert abs(mpo1.norm() - ref.norm()) < tol
+    assert abs(mpo3.norm() - ref.norm()) < tol
     # check by ||Ldag(a) L(b)||^2, should be the same if L(a) == L(b)
     tmp = mps.measure_overlap(mpo1, ref)
     assert abs(tmp / ref.norm()**2 - 1) < tol
