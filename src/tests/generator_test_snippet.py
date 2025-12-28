@@ -1,9 +1,9 @@
 import numpy as np
 import yastn
-import assets.tn.mps._generator_class as gen_mps
+import yastn_lenv_ext.tn.mps._generator_class as gen_mps
 import yastn.tn.mps as mps_fun
 import yastn.operators._spin12 as spin_ops
-import assets.tn.mps._env as env
+import yastn_lenv_ext.tn.mps._env as env
 
 config_kwargs = {"backend": "np"}
 
@@ -112,3 +112,8 @@ def test_env_update(config_kwargs, sym='dense', N=4):
 #test_env(config_kwargs=config_kwargs)
 
 test_env_update(config_kwargs=config_kwargs)
+
+def run_tests():
+    lindblad_mpo_latex(config_kwargs=config_kwargs)
+    test_env(config_kwargs=config_kwargs)
+    test_env_update(config_kwargs=config_kwargs)

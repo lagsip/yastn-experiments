@@ -1,0 +1,4 @@
+import tests
+
+tests.run_all_tests()
+

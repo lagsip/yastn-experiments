@@ -20,7 +20,7 @@ from yastn.tn.mps._initialize import random_mpo, random_mps
 from yastn.tn.mps._generate_mpo import Hterm, generate_mpo
 
 import numpy as np
-import assets.math.operators as opmath
+import yastn_lenv_ext.math.operators as opmath
 
 
 class GenericGenerator:

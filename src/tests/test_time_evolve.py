@@ -1,9 +1,17 @@
 import numpy as np
 from yastn.tn import mps
 import yastn
-import assets.tn.mps._generator_class as gen_mps
+import yastn_lenv_ext
+import yastn_lenv_ext.tn.mps._generator_class as gen_mps
 import yastn.operators._spin12 as spin_ops
 
+
+def run_tests():
+    rho_test(N, dir='x')
+    get_primitive(parameters)
+    lindblad_mpo_latex(ltx_str, parameters, config_kwargs = {"backend": "np"}, 
+                       sym='dense')
+    time_evolve(rho, L, tmax, dt)
 
 def rho_test(N, dir='x'):
     """

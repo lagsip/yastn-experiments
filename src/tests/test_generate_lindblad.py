@@ -1,6 +1,7 @@
 import numpy as np
 from yastn.tn import mps
-import assets.tn.mps._generator_class as gen_mps
+import yastn_lenv_ext
+import yastn_lenv_ext.tn.mps._generator_class as gen_mps
 import yastn.operators._spin12 as spin_ops
 
 def get_primitive(parameters):
@@ -99,3 +100,7 @@ if __name__ == '__main__':
     assert abs(tmp / ref.norm()**2 - 1) < tol
     tmp = mps.measure_overlap(mpo3, ref)
     assert abs(tmp / ref.norm()**2 - 1) < tol
+
+def run_tests():
+    lindblad_mpo_latex(ltx_str, parameters, config_kwargs=config_kwargs, sym=sym)
+    get_primitive(parameters)
