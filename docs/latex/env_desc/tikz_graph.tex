@@ -461,8 +461,8 @@ Heff1 is the Action of Heff on a site MPS tensor Heff1 @ AdagA
         \pgfextra{\xdef\envheight{\n1}};
     
     % draw left and right side of environment
-    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
-    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[n-1,n]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[n,n+1]$};
     
 
     % draw connections of tensors
@@ -529,8 +529,8 @@ First AdagA is contracted.
     \node[shape=rectangle, minimum width = 4cm, minimum height = 2cm] (empty) [below = 2 of $(LBra.center)!.5!(LKet.center)$] {};
 
     % draw left and right side of environment
-    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
-    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[n-1,n]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[n,n+1]$};
     
 
     % draw connections of tensors
@@ -584,8 +584,8 @@ Then the Operators are contracted.
     \node[shape=rectangle, minimum width = 4cm, minimum height = 2cm] (empty) [below = 2 of $(LBra.center)!.5!(LKet.center)$] {};
 
     % draw left and right side of environment
-    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
-    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[n-1,n]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[n,n+1]$};
     
 
     % draw connections of tensors
