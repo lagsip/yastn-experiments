@@ -16,7 +16,7 @@
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \title{Yastn Environment for Lindbladian}
-\author{Tim Klemm}
+\author{Gabriela Wojtowicz, Tim Klemm}
 \linespread{1.4}
 
 \hypersetup{urlcolor=cyan}
@@ -434,6 +434,184 @@ And lastly the 'lower' Tensors are contracted
         node[pos=1, above right] {5} (ADagBot -| Contracted.west);
 \end{tikzpicture}
 
+\section{Heff1}
+
+\subsection{Description}
+Heff1 is the Action of Heff on a site MPS tensor Heff1 @ AdagA
+
+\subsection{Parameters}
+\begin{itemize}
+    \item AdagA (tensor) - site tensor with 6 legs
+    \item n (int) - index of corresponding site
+\end{itemize}
+
+\subsection{Procedure}
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[draw, shape=circle] (LKet) {$L^{\dag}L_{j,ket}$};
+    \node[draw, shape=circle] (LBra) [right = 2 of LKet.center] {$L^{\dag}L_{j,bra}$};
+    \node[draw, shape=rectangle, minimum width = 4cm, minimum height = 2cm] (ADagATop) [above = 2 of $(LBra.center)!.5!(LKet.center)$] {$A_{j}^{\dag}A_{j}$};
+    \node[shape=rectangle, minimum width = 4cm, minimum height = 2cm] (empty) [below = 2 of $(LBra.center)!.5!(LKet.center)$] {};
+
+    % save the distance between the highest and lowest node to use later for the height of the environment
+    \path let \p1 = ($(ADagATop.north) - (LKet.center)$),
+            \n1 = {veclen(\x1, \y1)} in
+        \pgfextra{\xdef\envheight{\n1}};
+    
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (ADagATop.south -| LKet) to 
+        node[pos=0, below right] {3} 
+        node[pos=1, above left] {4} (LKet);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, above right] {3} 
+        node[pos=1, below left] {1} (LBra);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {} (LKet |- empty.north);
+    \draw[>>->>] (empty.north -| LBra) to 
+        node[pos=0, above left] {} 
+        node[pos=1, below right] {2} (LBra);
+    \draw[>>->>] (LBra) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {4} (LBra |- ADagATop.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] (Left.east |- ADagATop.north) -- 
+        node[pos=0, below left] {5} 
+        node[pos=1, below left] {1} (ADagATop.north west);
+    \draw[>>->>] (Left.east |- ADagATop.center) -- 
+        node[pos=0, below left] {4} 
+        node[pos=1, below left] {2} (ADagATop);
+    \draw[>>->>] [thick] (Left.east |- LKet) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, below left] {1} (LKet);
+    \draw[>>->>] (Left.east |- empty.center) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {} (empty);
+    \draw[>>->>] (Left.east |- empty.south) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {} (empty.south west);
+    
+    % draw connections to right environment
+    \draw[>>->>] (ADagATop.north east) -- 
+        node[pos=0, above right] {5} 
+        node[pos=1, above right] {1} (ADagATop.north -| Right.west);
+    \draw[>>->>] (ADagATop) -- 
+        node[pos=0, above right] {4} 
+        node[pos=1, above right] {2} (ADagATop.center -| Right.west);
+    \draw[>>->>] [thick] (LBra) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {3} (LBra -| Right.west);
+    \draw[>>->>] (empty) -- 
+        node[pos=0, above right] {} 
+        node[pos=1, above right] {4} (empty.center -| Right.west);
+    \draw[>>->>] (empty.south east) -- 
+        node[pos=0, above right] {} 
+        node[pos=1, above right] {5} (empty.south -| Right.west);
+\end{tikzpicture}
+
+
+First AdagA is contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[draw, shape=circle] (LKet) {$L^{\dag}L_{j,ket}$};
+    \node[draw, shape=circle] (LBra) [right = 2 of LKet.center] {$L^{\dag}L_{j,bra}$};
+    \node[draw, shape=rectangle, minimum width = 9cm, minimum height = 2cm] (Contracted) [above = 2 of $(LBra.center)!.5!(LKet.center)$] {};
+    \node[shape=rectangle, minimum width = 4cm, minimum height = 2cm] (empty) [below = 2 of $(LBra.center)!.5!(LKet.center)$] {};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (Contracted.south -| LKet) to 
+        node[pos=0, below right] {4} 
+        node[pos=1, above left] {4} (LKet);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, above right] {3} 
+        node[pos=1, below left] {1} (LBra);
+    \draw[>>->>] (LKet) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {} (LKet |- empty.north);
+    \draw[>>->>] (empty.north -| LBra) to 
+        node[pos=0, above left] {} 
+        node[pos=1, below right] {2} (LBra);
+    \draw[>>->>] (LBra) to 
+        node[pos=0, above left] {4} 
+        node[pos=1, below right] {5} (LBra |- Contracted.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] [thick] (Left.east |- LKet) -- 
+        node[pos=0, below left] {3} 
+        node[pos=1, below left] {1} (LKet);
+    \draw[>>->>] (Left.east |- empty.center) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {} (empty);
+    \draw[>>->>] (Left.east |- empty.south) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {} (empty.south west);
+    
+    % draw connections to right environment
+    \draw[>>->>] [thick] (LBra) -- 
+        node[pos=0, above right] {3} 
+        node[pos=1, above right] {3} (LBra -| Right.west);
+    \draw[>>->>] (empty) -- 
+        node[pos=0, above right] {} 
+        node[pos=1, above right] {4} (empty.center -| Right.west);
+    \draw[>>->>] (empty.south east) -- 
+        node[pos=0, above right] {} 
+        node[pos=1, above right] {5} (empty.south -| Right.west);
+\end{tikzpicture}
+
+Then the Operators are contracted.
+
+\begin{tikzpicture}
+
+    % draw tensors
+    \node[shape=circle] (LKet) {};
+    \node[shape=circle] (LBra) [right = 2 of LKet.center] {};
+    \node[draw, shape=rectangle, minimum width = 8cm, minimum height = 4cm] (Contracted) [above = 0 of $(LBra.center)!.5!(LKet.center)$] {};
+    \node[shape=rectangle, minimum width = 4cm, minimum height = 2cm] (empty) [below = 2 of $(LBra.center)!.5!(LKet.center)$] {};
+
+    % draw left and right side of environment
+    \node[draw, shape=semicircle, shape border rotate=90, minimum height={\envheight}] (Left) [left = 3 of LKet.center] {$F[-1,0]$};
+    \node[draw, shape=semicircle, shape border rotate=270, minimum height={\envheight}] (Right) [right = 3 of LBra.center] {$F[N,N+1]$};
+    
+
+    % draw connections of tensors
+    \draw[>>->>] (Contracted.south -| LKet) to 
+        node[pos=0, below right] {2} 
+        node[pos=1, above left] {} (LKet |- empty.north);
+    \draw[>>->>] (empty.north -| LBra) to 
+        node[pos=0, above left] {} 
+        node[pos=1, below right] {2} (LBra |- Contracted.south);
+    
+    % draw connections to left environment
+    \draw[>>->>] (Left.east |- empty.center) -- 
+        node[pos=0, below left] {2} 
+        node[pos=1, below left] {} (empty);
+    \draw[>>->>] (Left.east |- empty.south) -- 
+        node[pos=0, below left] {1} 
+        node[pos=1, below left] {} (empty.south west);
+    
+    % draw connections to right environment
+    \draw[>>->>] (empty) -- 
+        node[pos=0, above right] {} 
+        node[pos=1, above right] {4} (empty.center -| Right.west);
+    \draw[>>->>] (empty.south east) -- 
+        node[pos=0, above right] {} 
+        node[pos=1, above right] {5} (empty.south -| Right.west);
+\end{tikzpicture}
 
 \end{document}
 
