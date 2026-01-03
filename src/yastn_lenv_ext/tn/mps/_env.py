@@ -104,11 +104,13 @@ class Env_double_lindblad(EnvParent_double3_obc):
         op1, op2 = self.op[2*n], self.op[2*n+1]
         # TODO implement effective opperator, i.e. incomplete contraction on tikz_graph p.3 upper pannel
 
-        # tmp = A @ self.F[n + 1, n]
-        # tmp = tensordot(self.op.A[n], tmp, axes=((2, 3), (3, 1)))
-        # tmp = tensordot(self.F[n - 1, n], tmp, axes=((0, 1), (2, 0)))
-        # return tmp * self.op.factor
-        pass
+        # contract 'upper' layer AdagA to the env
+        axes = [(-1,-2,-3,2,1),(1,2,-4,-5,3,4),(4,3,-6,-7,-8)]
+        tmp = ncon([FL, AdagA, FR], axes)
+        # contract operator
+        axes = [(-1,-2,1,2,4,5,-5,-6),(1,-3,3,2),(3,-4,5,4)]
+        tmp = ncon([tmp, op1, op2], axes)
+        return tmp * self.op.factor
 
     def Heff2(self, AA, bd):
         # n1, n2 = bd if bd[0] < bd[1] else bd[::-1]
