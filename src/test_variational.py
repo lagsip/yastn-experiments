@@ -1,8 +1,10 @@
 import numpy as np
 import yastn.tn.mps as mps_fun
+from yastn import ncon
 import yastn_lenv_ext.tn.mps._generator_class as gen_mps
 import yastn.operators._spin12 as spin_ops
 import yastn_lenv_ext.tn.mps._env as env
+import yastn_lenv_ext.tn.mps._dmrg as dmrg
 
 def lindblad_mpo_latex(ops, ltx_str, parameters, config_kwargs = {"backend": "np"}, 
                        sym='dense'):
@@ -20,7 +22,7 @@ if __name__ == '__main__':
     config_kwargs = {"backend": "np"}
     sym = 'dense'
     # model settings
-    N = 2
+    N = 3
     h = np.random.rand(N)
     gamma = np.random.rand(N,N)#np.ones([N, N]) * 1
 
@@ -50,9 +52,19 @@ if __name__ == '__main__':
 
     for n in range(A.N):
         initA = A[n] # guess tensor of the initial guess
-        # calculate AdagA
+
+        # case A: calculate AdagA
         AdagA = initA.tensordot(initA.conj(), axes=((3,),(3,)))
-        AdagA.transpose(axes=(3,0,1,5,2,4,))
+        AdagA = AdagA.transpose(axes=(3,0,1,5,2,4,))
         # test calculate Heff1
         my_env.Heff1(AdagA, n)
         
+        # case B: calculate product
+        AdagA = ncon([initA, initA.conj()], [(-1,-2,-3,-4), (-5,-8,-7,-6)])
+
+        exit()
+        # test calculate Heff1
+        my_env.Heff1(AdagA, n)
+
+    dmrg._dmrg_sweep_1site_(my_env, opts_eigs=None, Schmidt=None, precompute=False)
+

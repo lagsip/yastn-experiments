@@ -102,14 +102,18 @@ class Env_double_lindblad(EnvParent_double3_obc):
         FL = self.F[n - 1, n]
         FR = self.F[n + 1, n]
         op1, op2 = self.op[2*n], self.op[2*n+1]
-        # TODO implement effective opperator, i.e. incomplete contraction on tikz_graph p.3 upper pannel
-
-        # contract 'upper' layer AdagA to the env
-        axes = [(-1,-2,-3,2,1),(1,2,-4,-5,3,4),(4,3,-6,-7,-8)]
-        tmp = ncon([FL, AdagA, FR], axes)
-        # contract operator
-        axes = [(-1,-2,1,2,4,5,-5,-6),(1,-3,3,2),(3,-4,5,4)]
-        tmp = ncon([tmp, op1, op2], axes)
+        if AdagA.ndim == 6:
+            tmp = FL.tensordot(AdagA, axes=((3,4,),(1,0,)))
+            tmp = tmp.tensordot(FR, axes=((4,5,),(0,1,)))
+            tmp = tmp.tensordot(op1, axes=((2,3,),(0,3,)))
+            tmp = tmp.tensordot(op2, axes=((2,3,7,),(3,2,0,)))
+            tmp = tmp.transpose(axes=(1,0,4,2,3,5))
+        if AdagA.ndim == 8:
+            tmp = FL.tensordot(AdagA, axes=((3,4,),(1,0,)))
+            tmp = tmp.tensordot(FR, axes=((4,5,),(0,1,)))
+            tmp = tmp.tensordot(op1, axes=((2,3,),(0,3,)))
+            tmp = tmp.tensordot(op2, axes=((2,3,7,),(3,2,0,)))
+            tmp = tmp.transpose(axes=(1,0,4,2,3,5))
         return tmp * self.op.factor
 
     def Heff2(self, AA, bd):
