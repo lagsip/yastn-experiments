@@ -22,7 +22,7 @@ if __name__ == '__main__':
     config_kwargs = {"backend": "np"}
     sym = 'dense'
     # model settings
-    N = 3
+    N = 8
     h = np.random.rand(N)
     gamma = np.random.rand(N,N)#np.ones([N, N]) * 1
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     
     # initial guess of the solution
     I = mps_fun.product_mpo(ops.I(), N)
-    A = mps_fun.random_mpo(I)
+    A = mps_fun.random_mpo(I, D_total=4)
     
     # initiate environment
     my_env = env.Env_double_lindblad(A,LL,A)
@@ -58,13 +58,18 @@ if __name__ == '__main__':
         AdagA = AdagA.transpose(axes=(3,0,1,5,2,4,))
         # test calculate Heff1
         my_env.Heff1(AdagA, n)
+        assert (AdagA.s == my_env.Heff1(AdagA, n).s)
         
         # case B: calculate product
         AdagA = ncon([initA, initA.conj()], [(-1,-2,-3,-4), (-5,-8,-7,-6)])
-
-        exit()
         # test calculate Heff1
         my_env.Heff1(AdagA, n)
 
-    dmrg._dmrg_sweep_1site_(my_env, opts_eigs=None, Schmidt=None, precompute=False)
+        assert (AdagA.s == my_env.Heff1(AdagA, n).s)
+
+    dmrg._dmrg_sweep_1site_(my_env, opts_eigs=None, Schmidt=None, precompute=False, case="B")
+    
+    for step in dmrg.dmrg_(A, LL, max_sweeps=10, iterator_step=1):
+        print(step)
+        print(A.get_bond_dimensions())
 

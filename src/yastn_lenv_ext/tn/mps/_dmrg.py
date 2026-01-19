@@ -1,9 +1,10 @@
 
 from typing import NamedTuple
 import logging
-from yastn import eigs, YastnError
+from yastn import eigs, YastnError, ncon
 import numpy as np
-from yastn import eigh as eigh
+from yastn import eigh, svd_with_truncation
+from yastn_lenv_ext.tn.mps._env import Env_double_lindblad
 
 logger = logging.Logger('dmrg')
 
@@ -37,7 +38,7 @@ def _dmrg_(psi, H, method,
     if not psi.is_canonical(to='first'):
         psi.canonize_(to='first')
 
-    env = env.Env_double_lindblad(psi,H,psi)
+    env = Env_double_lindblad(psi,H,psi)
     env.setup_(to='first')
 
     E_old = env.measure().item().real
@@ -89,7 +90,7 @@ def _dmrg_(psi, H, method,
     yield DMRG_out(sweep, str(method), E, dE, max_dS, max_dw)
 
 
-def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False):
+def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False, case="B"):
     r"""
     Perform sweep with 1-site DMRG, see :meth:`dmrg` for description.
 
@@ -106,18 +107,23 @@ def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False):
         for n in rhoA.sweep(to=to):
             # calculate AdagA
             initA = rhoA[n]
-            AdagA = initA.tensordot(initA.conj(), axes=((3,),(3,)))
-            AdagA = AdagA.transpose(axes=(3,0,1,5,2,4,))
+            if case is "A":
+                AdagA = initA.tensordot(initA.conj(), axes=((3,),(3,)))
+                AdagA = AdagA.transpose(axes=(3,0,1,5,2,4,))
+            if case is "B":
+                AdagA = ncon([initA, initA.conj()], [(-1,-2,-3,-4), (-5,-8,-7,-6)])
             _, (BdagB,) = eigs(lambda x: env.Heff1(x, n), AdagA, k=1, **opts_eigs)
-            #print(AdagA.vdot(BdagB)/np.sqrt(AdagA.norm() * BdagB.norm()))
-            s,u = eigh(BdagB, axes=((0,5,4), (1,2,3)))
-            print(s.to_numpy().diagonal())
-            exit()
-            # TODO: split BdagB to extract B of the purification
-            # TODO: paste rhoA[n]=B, # rhoA.post_1site_(A, n)
+            if case is "A":
+                exit()
+            if case is "B":
+                u, s, v = svd_with_truncation(BdagB, axes=((0,1,2,3), (4,5,6,7)), D_total=1)
+                #print(s.to_numpy().diagonal())
+                extractA = u.remove_leg()
+                #print(extractA)
+            rhoA[n] = extractA
             rhoA.orthogonalize_site_(n, to=to, normalize=True)
-            #if Schmidt is not None and to == 'first' and n != rhoA.first:
-            #    Schmidt[rhoA.pC] = rhoA[rhoA.pC].svd(sU=1, compute_uv=False)
+            if Schmidt is not None and to == 'first' and n != rhoA.first:
+                Schmidt[rhoA.pC] = rhoA[rhoA.pC].svd(sU=1, compute_uv=False)
             rhoA.absorb_central_(to=to)
             env.clear_site_(n)
             env.update_env_(n, to=to)

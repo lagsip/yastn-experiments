@@ -109,11 +109,15 @@ class Env_double_lindblad(EnvParent_double3_obc):
             tmp = tmp.tensordot(op2, axes=((2,3,7,),(3,2,0,)))
             tmp = tmp.transpose(axes=(1,0,4,2,3,5))
         if AdagA.ndim == 8:
-            tmp = FL.tensordot(AdagA, axes=((3,4,),(1,0,)))
-            tmp = tmp.tensordot(FR, axes=((4,5,),(0,1,)))
+            tmp = AdagA.trace(axes=(3,5))
+            tmp = FL.tensordot(tmp, axes=((3,4,),(0,3,)))
             tmp = tmp.tensordot(op1, axes=((2,3,),(0,3,)))
-            tmp = tmp.tensordot(op2, axes=((2,3,7,),(3,2,0,)))
-            tmp = tmp.transpose(axes=(1,0,4,2,3,5))
+            tmp = tmp.tensordot(op2, axes=((6,4,),(0,3,)))
+            tmp = tmp.tensordot(FR, axes=((3,2,6,),(0,1,2,)))
+            legs = AdagA.get_legs(axes=(3,5))
+            trace_dummy = eye(tmp.config, legs = [l for l in legs], isdiag=False)
+            tmp = tmp.transpose(axes=(0,2,5,1,4,3))
+            tmp = ncon([tmp, trace_dummy], [(-1,-2,-3, -5,-7,-8),(-4,-6,)])
         return tmp * self.op.factor
 
     def Heff2(self, AA, bd):
