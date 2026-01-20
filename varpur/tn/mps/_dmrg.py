@@ -2,9 +2,8 @@
 from typing import NamedTuple
 import logging
 from yastn import eigs, YastnError, ncon
-import numpy as np
-from yastn import eigh, svd_with_truncation
-from yastn_lenv_ext.tn.mps._env import Env_double_lindblad
+from yastn import svd_with_truncation
+from varpur.tn.mps._env import Env_double_lindblad
 
 logger = logging.Logger('dmrg')
 

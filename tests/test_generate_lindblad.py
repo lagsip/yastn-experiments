@@ -1,7 +1,7 @@
 import numpy as np
 from yastn.tn import mps
 from yastn.operators._spin12 import Spin12
-import yastn_lenv_ext.tn.mps._generator_class as gen_mps
+import varpur.tn.mps._generator_class as gen_mps
 
 
 def get_primitive(ops, parameters):
@@ -15,7 +15,6 @@ def get_primitive(ops, parameters):
     zcc = ops.z().transpose()
     id = ops.I()
     idcc = ops.I().transpose()
-
     # assemble full lindbladian using primitive Hterm
     Hterms = []
     # unitary term
@@ -34,8 +33,6 @@ def get_primitive(ops, parameters):
         Hterms.append(hterm)
     Idlist = [id if n % 2 == 0 else idcc for n in range(2*N)]
     Id = mps.product_mpo(Idlist)
-    #for c in Hterms:
-    #    print("\n", c.amplitude * c.operators[0].to_numpy())
     return mps.generate_mpo(Id, Hterms)
 
 def lindblad_mpo_latex(ops, ltx_str, parameters):
@@ -56,7 +53,7 @@ def test_transcriptions():
     # model settings
     N = 2
     h = np.random.rand(N)
-    gamma = np.random.rand(N,N)#np.ones([N, N]) * 1
+    gamma = np.random.rand(N,N)
 
     # get from primitive approach
     parameters = {"gamma": gamma,

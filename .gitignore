@@ -1,0 +1,4 @@
+venv/
+build/
+varpur.egg-info/
+varpur/__pycache__/

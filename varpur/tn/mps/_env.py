@@ -14,16 +14,8 @@
 # ==============================================================================
 """ Environments for the <mps| mpo |mps> and <mps|mps>  contractions. """
 from __future__ import annotations
-# import abc
-# import copy
-# from numbers import Number
-from yastn import eye, ones, tensordot, ncon, vdot, qr, svd, Tensor, YastnError
-# from yastn.tn.mps import MpsMpoOBC, MpoPBC
+from yastn import eye, ones, ncon, vdot, YastnError
 from yastn.tn.mps._env import EnvParent
-
-from yastn.tn.mps._mps_obc import multiply
-
-
 
 class EnvParent_double3(EnvParent):
 

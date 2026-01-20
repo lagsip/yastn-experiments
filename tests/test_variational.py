@@ -2,9 +2,9 @@ import numpy as np
 import yastn.tn.mps as mps
 from yastn import Tensor, ncon
 from yastn.operators._spin12 import Spin12
-import yastn_lenv_ext.tn.mps._generator_class as gen_mps
-import yastn_lenv_ext.tn.mps._env as env
-import yastn_lenv_ext.tn.mps._dmrg as dmrg
+import varpur.tn.mps._generator_class as gen_mps
+import varpur.tn.mps._env as env
+import varpur.tn.mps._dmrg as dmrg
 
 def rho_test(ops, N, dir='x'):
     """

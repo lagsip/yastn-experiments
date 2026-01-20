@@ -14,13 +14,12 @@
 # ==============================================================================
 from __future__ import annotations
 from yastn import YastnError
-from yastn.tn.mps._mps_obc import Mps, Mpo, MpsMpoOBC
+from yastn.tn.mps._mps_obc import Mps, MpsMpoOBC
 from yastn.tn.mps._latex2term import latex2term
 from yastn.tn.mps._initialize import random_mpo, random_mps
 from yastn.tn.mps._generate_mpo import Hterm, generate_mpo
-
 import numpy as np
-import yastn_lenv_ext.math.operators as opmath
+import varpur.math.operators as opmath
 
 
 class GenericGenerator:
