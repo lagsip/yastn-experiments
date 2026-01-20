@@ -1,17 +1,16 @@
 import numpy as np
 from yastn.tn import mps
-import yastn_lenv_ext
+from yastn.operators._spin12 import Spin12
 import yastn_lenv_ext.tn.mps._generator_class as gen_mps
-import yastn.operators._spin12 as spin_ops
 
-def get_primitive(parameters):
+
+def get_primitive(ops, parameters):
     """
     Write the Lindladian by hand using a series of Hterms. 
     """
     N = parameters["N"]
     gamma = parameters["gamma"]
     # input operators
-    ops = spin_ops.Spin12(sym=sym, **config_kwargs)
     z = ops.z()
     zcc = ops.z().transpose()
     id = ops.I()
@@ -39,23 +38,21 @@ def get_primitive(parameters):
     #    print("\n", c.amplitude * c.operators[0].to_numpy())
     return mps.generate_mpo(Id, Hterms)
 
-def lindblad_mpo_latex(ltx_str, parameters, config_kwargs = {"backend": "np"}, 
-                       sym='dense'):
+def lindblad_mpo_latex(ops, ltx_str, parameters):
     """
     Creates an Mpo object for the lindbladian with the density matrix extracted
     """
     N = parameters["N"]
     assert len(parameters["gamma"]) == N
     # input operators
-    ops = spin_ops.Spin12(sym=sym, **config_kwargs)
     generate = gen_mps.GenericGenerator(2*N, ops, debug=False)
     return generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
 
-
-if __name__ == '__main__':
+def test_transcriptions():
     # tensor settings
     config_kwargs = {"backend": "np"}
     sym = 'dense'
+    ops = Spin12(sym=sym, **config_kwargs)
     # model settings
     N = 2
     h = np.random.rand(N)
@@ -65,19 +62,18 @@ if __name__ == '__main__':
     parameters = {"gamma": gamma,
                     "h": h,
                     "N": N}
-    ref = get_primitive(parameters)
+    ref = get_primitive(ops, parameters)
     # test
     ltx_str = r"-i (\sum_{j=0}^{N-1} h_{j} ([\sigma_j^z, \rho])) + \sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j}^{z} \rho \sigma_{k}^{z} - \frac{1}{2} \{ \sigma_{k}^{z} \sigma_{j}^{z}, \rho \} )"
     parameters = {"gamma": gamma,
                     "h": h,
                     "N": N}
-    mpo1 = lindblad_mpo_latex(ltx_str, parameters)
-    # test TODO: identify and fix: Recurssion error. 
-    #ltx_str = r"-i {\sum_{j=0}^{N-1} h_{j} (\sigma_{j,ket}^{z} - \sigma_{j,bra}^{z})} + {\sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j,ket}^{z} \sigma_{k,bra}^{z} - \frac{1}{2} ( \sigma_{k,ket}^{z} \sigma_{j,ket}^{z} + \sigma_{k,bra}^{z} \sigma_{j,bra}^{z} ) )}"
-    #parameters = {"gamma": gamma,
-    #              "h": h,
-    #                "N": N}
-    #mpo2 = lindblad_mpo_latex(ltx_str, parameters)
+    mpo1 = lindblad_mpo_latex(ops, ltx_str, parameters)
+    ltx_str = r"-i (\sum_{j=0}^{N-1} h_{j} (\sigma_{j,ket}^z - \sigma_{j,bra}^z)) + (\sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j,ket}^{z} \sigma_{k,bra}^{z} - \frac{1}{2} ( \sigma_{k,ket}^{z} \sigma_{j,ket}^{z} + \sigma_{k,bra}^{z} \sigma_{j,bra}^{z} )))"
+    parameters = {"gamma": gamma,
+                  "h": h,
+                    "N": N}
+    mpo2 = lindblad_mpo_latex(ops, ltx_str, parameters)
     # test
     ltx_str = r"-imun (\sum_{j,jk,jb \in Nx} h_{j} (z_{jk} - zcc_{jb})) + \sum_{j,k,jk,jb,kk,kb \in NxN} gamma_{j,k} (z_{jk} zcc_{kb} - 1.0div2.0 ( z_{kk} z_{jk} + zcc_{kb} zcc_{jb} ) )"
     parameters = {"gamma": gamma,
@@ -88,19 +84,21 @@ if __name__ == '__main__':
                 "Nx": [(i, 2*i, 2*i+1) for i in range(N)],
                 "NxN": [(i, j, 2*i, 2*i+1, 2*j, 2*j+1) for i in range(N) for j in range(N)]
                 }
-    mpo3 = lindblad_mpo_latex(ltx_str, parameters)
+    mpo3 = lindblad_mpo_latex(ops, ltx_str, parameters)
     
     # crosscheck between test cases
     tol = 1e-12
     # check by ||Ldag L||^2 norm, should be the same
     assert abs(mpo1.norm() - ref.norm()) < tol
+    assert abs(mpo2.norm() - ref.norm()) < tol
     assert abs(mpo3.norm() - ref.norm()) < tol
     # check by ||Ldag(a) L(b)||^2, should be the same if L(a) == L(b)
     tmp = mps.measure_overlap(mpo1, ref)
     assert abs(tmp / ref.norm()**2 - 1) < tol
+    tmp = mps.measure_overlap(mpo2, ref)
+    assert abs(tmp / ref.norm()**2 - 1) < tol
     tmp = mps.measure_overlap(mpo3, ref)
     assert abs(tmp / ref.norm()**2 - 1) < tol
 
-def run_tests():
-    lindblad_mpo_latex(ltx_str, parameters, config_kwargs=config_kwargs, sym=sym)
-    get_primitive(parameters)
+if __name__ == '__main__':
+    test_transcriptions()

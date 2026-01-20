@@ -117,9 +117,8 @@ def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False, case
                 exit()
             if case is "B":
                 u, s, v = svd_with_truncation(BdagB, axes=((0,1,2,3), (4,5,6,7)), D_total=1)
-                #print(s.to_numpy().diagonal())
                 extractA = u.remove_leg()
-                #print(extractA)
+                print(s.to_numpy().diagonal(), (extractA - initA).norm())
             rhoA[n] = extractA
             rhoA.orthogonalize_site_(n, to=to, normalize=True)
             if Schmidt is not None and to == 'first' and n != rhoA.first:

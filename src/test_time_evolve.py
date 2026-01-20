@@ -1,19 +1,10 @@
 import numpy as np
+from yastn import Tensor
 from yastn.tn import mps
-import yastn
-import yastn_lenv_ext
+from yastn.operators._spin12 import Spin12
 import yastn_lenv_ext.tn.mps._generator_class as gen_mps
-import yastn.operators._spin12 as spin_ops
 
-
-def run_tests():
-    rho_test(N, dir='x')
-    get_primitive(parameters)
-    lindblad_mpo_latex(ltx_str, parameters, config_kwargs = {"backend": "np"}, 
-                       sym='dense')
-    time_evolve(rho, L, tmax, dt)
-
-def rho_test(N, dir='x'):
+def rho_test(ops, N, dir='x'):
     """
     Generate initial state ``rho" as eigenstate of direction ``dir" 
     and get identity matrix ``id" for calculating overlaps. 
@@ -21,8 +12,6 @@ def rho_test(N, dir='x'):
     Returns:
         rho, id:  yastn.tn.mps.Mps
     """
-    ops = spin_ops.Spin12(sym=sym, **config_kwargs)
-    
     # get direction of the initial state
     if dir == 'x':
         vec = ops.vec_x(1)
@@ -37,18 +26,17 @@ def rho_test(N, dir='x'):
     rho = mps.product_mps(vec_list)
 
     # construct identity matrix
-    t1 = yastn.Tensor(config=vec.config, s=rho[0].s)
+    t1 = Tensor(config=vec.config, s=rho[0].s)
     t1.set_block(Ds=(1,2,2), val=[[1,0],[0,1]])
-    t2 = yastn.Tensor(config=vec.config, s=rho[1].s)
+    t2 = Tensor(config=vec.config, s=rho[1].s)
     t2.set_block(Ds=(2,2,1), val=[[1,0],[0,1]])
     id = mps.Mps(2*N)
     for n in range(N):
         id[2*n] = t1
         id[2*n+1] = t2
-    
     return rho, id
 
-def get_primitive(parameters):
+def get_primitive(ops, parameters):
     """
     Write the Lindladian by hand using a series of Hterms. 
     """
@@ -56,7 +44,6 @@ def get_primitive(parameters):
     gamma = parameters["gamma"]
     assert len(gamma) == N
     # input operators
-    ops = spin_ops.Spin12(sym=sym, **config_kwargs)
     z = ops.z()
     zcc = ops.z().transpose()
     z = ops.z()
@@ -84,14 +71,12 @@ def get_primitive(parameters):
     Id = mps.product_mpo(Idlist)
     return mps.generate_mpo(Id, Hterms)
 
-def lindblad_mpo_latex(ltx_str, parameters, config_kwargs = {"backend": "np"}, 
-                       sym='dense'):
+def lindblad_mpo_latex(ops, ltx_str, parameters):
     """
     Creates an Mpo object for the lindbladian with the density matrix extracted
     """
     N = parameters["N"]
     # input operators
-    ops = spin_ops.Spin12(sym=sym, **config_kwargs)
     generate = gen_mps.GenericGenerator(2*N, ops, debug=False)
     return generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
 
@@ -108,37 +93,38 @@ def time_evolve(rho, L, tmax, dt):
                             opts_svd=opts_svd, opts_expmv=opts_expmv):
         yield step
 
-if __name__ == '__main__':
+def test_time_evolution():
     # tensor settings
     config_kwargs = {"backend": "np"}
     sym = 'dense'
+    ops = Spin12(sym=sym, **config_kwargs)
     # model settings
-    N, temp = 4, 1
-    h = np.ones(N) * 0
+    N = 4
+    h = np.ones(N) * 1
     gamma = np.diag(np.ones(N)) * 1
 
     # get from primitive approach
     parameters = {"gamma": gamma,
                     "h": h,
                     "N": N}
-    ref = get_primitive(parameters)
+    ref = get_primitive(ops, parameters)
 
     # test
     ltx_str = r"-i (\sum_{j=0}^{N-1} h_{j} ([\sigma_j^x, \rho])) + \sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_{j}^{z} \rho \sigma_{k}^{z} - \frac{1}{2} \{ \sigma_{k}^{z} \sigma_{j}^{z}, \rho \} )"
     parameters = {"gamma": gamma,
                     "h": h,
                     "N": N}
-    mpo1 = lindblad_mpo_latex(ltx_str, parameters)
+    mpo1 = lindblad_mpo_latex(ops, ltx_str, parameters)
 
     # measure
     ltx_str = r"\sum_{j=0}^{N-1} \sigma_j^z \rho"
-    Mz = lindblad_mpo_latex(ltx_str, {"N": N}) / N
+    Mz = lindblad_mpo_latex(ops, ltx_str, {"N": N}) / N
     ltx_str = r"\sum_{j=0}^{N-1} \sigma_j^x \rho"
-    Mx = lindblad_mpo_latex(ltx_str, {"N": N}) / N
+    Mx = lindblad_mpo_latex(ops, ltx_str, {"N": N}) / N
 
     lind, dir = mpo1, 'x'
     print("Initial state is aligned with the polatization", dir)
-    rho, id = rho_test(N, dir)
+    rho, id = rho_test(ops, N, dir)
     tmax, dt = 3, 0.1
 
     tol= 1e-12
@@ -164,7 +150,10 @@ if __name__ == '__main__':
         if dir == 'z':
             assert abs(conv) < tol # if aligned with 'z', is steady state
 
-
         print("time: ", round(step.ti, 2), round(step.tf, 2), 
               "M: ", round(np.real(mz), 4), round(np.real(mx), 4),
               "conv: ", conv)
+
+
+if __name__ == '__main__':
+    test_time_evolution()
