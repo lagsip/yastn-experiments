@@ -142,6 +142,7 @@ class GenericGenerator:
         rho2ketbra: bool
             Whether rho should be extracted, resolved into ketbra notation and re-indexed to 2n sites
         """
+        if self.debug: print("\Original Latex String:\n", ltx_str)
         c1, generated_params = self.any2simple_latex(ltx_str, parameters, ignore_i=ignore_i, rho2ketbra=rho2ketbra)
         if self.debug: print("This is c1: \n", c1, "\n")
         generated_params = {**self.parameters, **generated_params}
@@ -285,7 +286,7 @@ class GenericGenerator:
                     length = 2
                 elif (bracket == '{'):
                     operator = '+'
-                    length = 6
+                    length = 4
 
                     # due to the backslash required for { brackets, remove them for smooth replacement later
                     new_expr = new_expr[0:(open_ind[ind_num_open]-1)] \
@@ -383,18 +384,13 @@ class GenericGenerator:
 
             # for each object add the bra subscript
             new_objects = []
-            for obj in objects:
+            for obj in reversed(objects):
                 subscript_ind = obj.find('_{') + 2
                 if(subscript_ind == 1):
                     subscript_ind = obj.find('_') + 1
-                    if(subscript_ind == 0):
-                        subscript_ind = obj.find('^')
-                        if(subscript_ind == -1):
-                            new_objects += (obj + '_{bra}')
-                        else:
-                            new_objects += obj[:subscript_ind] + "_{bra}" + obj[subscript_ind:]
-                    else:
+                    if(subscript_ind != 0):
                         new_objects += obj[:subscript_ind] + '{' + obj[subscript_ind] + ',bra}' + obj[(subscript_ind+1):]
+                    else: new_objects += obj
                 else:
                     layer = 0
                     while subscript_ind < len(obj):
@@ -460,14 +456,9 @@ class GenericGenerator:
                 subscript_ind = obj.find('_{') + 2
                 if(subscript_ind == 1):
                     subscript_ind = obj.find('_') + 1
-                    if(subscript_ind == 0):
-                        subscript_ind = obj.find('^')
-                        if(subscript_ind == -1):
-                            new_objects += (obj + '_{ket}')
-                        else:
-                            new_objects += obj[:subscript_ind] + "_{ket}" + obj[subscript_ind:]
-                    else:
+                    if(subscript_ind != 0):
                         new_objects += obj[:subscript_ind] + '{' + obj[subscript_ind] + ',ket}' + obj[(subscript_ind+1):]
+                    else: new_objects += obj
                 else:
                     layer = 0
                     while subscript_ind < len(obj):
@@ -742,7 +733,6 @@ class GenericGenerator:
                     new_sums += "\\sum_{" + iterator_str + " \\in " + set_str + "} "
                     if(extend_kb_notation):
                         new_params[set_str] = self.extend_tuple_listKB(new_params[set_str])
-
                 #print("loc",sum_loc)
                 #print("end",sum_end)
                 new_expr = new_expr[:sum_loc] + new_sums + new_expr[sum_end:]
@@ -858,10 +848,42 @@ class GenericGenerator:
         while(f_loc != -1):
             top_terms, mid_loc = self.split_ltx2terms(new_expr, f_loc + 5, return_length=True)
             bot_terms, end_loc = self.split_ltx2terms(new_expr, mid_loc, return_length=True)
+            print(top_terms)
+            print(bot_terms)
             try:
                 top_val = self.resolve_term(top_terms[1:-1], parameters=parameters)
                 bot_val = self.resolve_term(bot_terms[1:-1], parameters=parameters)
-                str_val = str(top_val.real) + "pls" + str(top_val.imag) + "jfrac" + str(bot_val.real) + "pls" + str(bot_val.imag) + "j"
+                print(top_val)
+                print(bot_val)
+                top_real = ""
+                top_imag = ""
+                bot_real = ""
+                bot_imag = ""
+                if (top_val.real < 0):
+                    top_real += "mns"
+                else:
+                    top_real += "pls"
+                top_real += str(abs(top_val.real))
+
+                if (top_val.imag < 0):
+                    top_imag += "mns"
+                else:
+                    top_imag += "pls"
+                top_imag += str(abs(top_val.imag))
+
+                if (bot_val.real < 0):
+                    bot_real += "mns"
+                else:
+                    bot_real += "pls"
+                bot_real += str(abs(bot_val.real))
+
+                if (bot_val.imag < 0):
+                    bot_imag += "mns"
+                else:
+                    bot_imag += "pls"
+                bot_imag += str(abs(bot_val.imag))
+                
+                str_val = top_real + top_imag + "jfrac" + bot_real + bot_imag +  "j"
                 val = top_val/bot_val
 
                 new_expr = new_expr[:f_loc] + str_val + new_expr[end_loc:]
@@ -1128,10 +1150,7 @@ class GenericGenerator:
                 ind = new_term.index(op)
                 if(ind == 0):
                     # if the found index is 0 consider that it might be a sign, otherwise ignore it
-                    if(op == "-"):
-                        new_term = [-1*new_term[1]] + new_term[2:]
-                    else:
-                        new_term = new_term[1:]
+                    new_term = new_term[1:]
                 elif(0 < ind < (len(new_term)-1)):
                     # if the ind is inbetween two other entries, perform the operation on those two entries
                     be4 = []

@@ -35,14 +35,77 @@ def get_primitive(ops, parameters):
     Id = mps.product_mpo(Idlist)
     return mps.generate_mpo(Id, Hterms)
 
+def get_primitive_heisenberg(ops, parameters):
+    """
+    Write the Lindladian by hand using a series of Hterms. 
+    """
+    N = parameters["N"]
+    h = parameters["h"]
+    Jxx = parameters["Jxx"]
+    Jyy = parameters["Jyy"]
+    Jzz = parameters["Jzz"]
+    gxx = parameters["gxx"]
+    gyy = parameters["gyy"]
+    gzz = parameters["gzz"]
+    # input operators
+    x, y, z, id = ops.x(), ops.y(), ops.z(), ops.I()
+    xcc, ycc, zcc, idcc = x.T, y.T, z.T, id.T
+    # assemble full lindbladian using primitive Hterm
+    Hterms = []
+    # UNITARY
+    for n in range(N):
+        hterm = mps.Hterm( -1j * parameters["h"][n], positions=[2*n], operators=[z])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( 1j * parameters["h"][n], positions=[2*n+1], operators=[zcc])
+        Hterms.append(hterm)
+    for i, k in zip(*np.nonzero(Jxx)):
+        hterm = mps.Hterm( -1j * Jxx[i,k], positions=[2*i,2*k], operators=[x, x])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( 1j * Jxx[i,k], positions=[2*i+1,2*k+1], operators=[xcc, xcc])
+        Hterms.append(hterm)
+    for i, k in zip(*np.nonzero(Jyy)):
+        hterm = mps.Hterm( -1j * Jyy[i,k], positions=[2*i,2*k], operators=[y, y])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( 1j * Jyy[i,k], positions=[2*i+1,2*k+1], operators=[ycc, ycc])
+        Hterms.append(hterm)
+    for i, k in zip(*np.nonzero(Jzz)):
+        hterm = mps.Hterm( -1j * Jzz[i,k], positions=[2*i,2*k], operators=[z, z])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( 1j * Jzz[i,k], positions=[2*i+1,2*k+1], operators=[zcc, zcc])
+        Hterms.append(hterm)
+    # DISSIPATION
+    for i, j in zip(*np.nonzero(gxx)):
+        hterm = mps.Hterm( gxx[i,j], positions=[2*i, 2*j+1], operators=[x, xcc])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( -1/2 * gxx[i,j], positions=[2*i, 2*j], operators=[x, x])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( -1/2 * gxx[i,j], positions=[2*i+1, 2*j+1], operators=[xcc, xcc])
+        Hterms.append(hterm)
+    for i, j in zip(*np.nonzero(gyy)):
+        hterm = mps.Hterm( gyy[i,j], positions=[2*i, 2*j+1], operators=[y, ycc])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( -1/2 * gyy[i,j], positions=[2*i, 2*j], operators=[y, y])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( -1/2 * gyy[i,j], positions=[2*i+1, 2*j+1], operators=[ycc, ycc])
+        Hterms.append(hterm)
+    for i, j in zip(*np.nonzero(gzz)):
+        hterm = mps.Hterm( gzz[i,j], positions=[2*i, 2*j+1], operators=[z, zcc])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( -1/2 * gzz[i,j], positions=[2*i, 2*j], operators=[z, z])
+        Hterms.append(hterm)
+        hterm = mps.Hterm( -1/2 * gzz[i,j], positions=[2*i+1, 2*j+1], operators=[zcc, zcc])
+        Hterms.append(hterm)
+    Idlist = [id if n % 2 == 0 else idcc for n in range(2*N)]
+    Id = mps.product_mpo(Idlist)
+    return mps.generate_mpo(Id, Hterms)
+
 def lindblad_mpo_latex(ops, ltx_str, parameters):
     """
     Creates an Mpo object for the lindbladian with the density matrix extracted
     """
     N = parameters["N"]
-    assert len(parameters["gamma"]) == N
     # input operators
-    generate = gen_mps.GenericGenerator(2*N, ops, debug=False)
+    generate = gen_mps.GenericGenerator(2*N, ops, debug=True)
     return generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
 
 def test_transcriptions():
@@ -97,5 +160,93 @@ def test_transcriptions():
     tmp = mps.measure_overlap(mpo3, ref)
     assert abs(tmp / ref.norm()**2 - 1) < tol
 
+def test_models():
+    # tensor settings
+    config_kwargs = {"backend": "np"}
+    sym = 'dense'
+    ops = Spin12(sym=sym, **config_kwargs)
+    # model settings
+    N = 2
+    h = np.random.rand(N)
+    gamma = np.random.rand(N,N)
+    parameters = {"gamma": gamma,
+                    "h": h,
+                    "N": N}
+    # get from primitive approach
+    ref = get_primitive(ops, parameters)
+    # get from generator
+    #ltx_str = r"-i (\sum_{j=0}^{N-1} h_{j} ([\sigma_j^z, \rho])) "
+    ltx_str = r"-i (\sum_{j = 0}^{N-1} h_{j} [z_j, \rho]) "
+    ltx_str += r"+ (\sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_j^z \rho \sigma_k^z - \frac{1}{2} \{ \sigma_k^z \sigma_j^z, \rho \} ))"
+    ltx_str += r"+ (\sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_j^z \rho \sigma_k^z - \frac{1}{2} \{ \sigma_k^z \sigma_j^z, \rho \} ))"
+    ltx_str += r"+ (\sum_{j,k = 0}^{N-1} \gamma_{j,k} (\sigma_j^z \rho \sigma_k^z - \frac{-1-1j}{-3+1j} \sigma_k^z \sigma_j^z \rho - \frac{1}{2} \rho \sigma_k^z \sigma_j^z ))"
+    mpo1 = lindblad_mpo_latex(ops, ltx_str, parameters)
+    exit()
+
+    # crosscheck between test cases
+    tol = 1e-12
+    # check by ||Ldag L||^2 norm, should be the same
+    assert abs(mpo1.norm() - ref.norm()) < tol
+    # check by ||Ldag(a) L(b)||^2, should be the same if L(a) == L(b)
+    tmp = mps.measure_overlap(mpo1, ref)
+    assert abs(tmp / ref.norm()**2 - 1) < tol
+
+def test_heisenberg():
+    # tensor settings
+    config_kwargs = {"backend": "np"}
+    sym = 'dense'
+    ops = Spin12(sym=sym, **config_kwargs)
+    # model settings
+    N = 2
+    h = np.random.rand(N)
+    J = np.random.rand(N,N)
+    J = (J + J.T.conj()) / 2
+    Jxx = Jyy = Jzz = J
+    gamma = np.random.rand(N,N)
+    gamma = gamma @ gamma.T.conj() # has real and positive eigenvalues
+    gxx = gyy = gzz = gamma
+    parameters = {"N": N,
+                  "h": h,
+                  "Jxx": Jxx,
+                  "Jyy": Jyy,
+                  "Jzz": Jzz,
+                  "gxx": gxx,
+                  "gyy": gyy,
+                  "gzz": gzz,
+                    }
+    # get from primitive approach
+    ref = get_primitive_heisenberg(ops, parameters)
+    # get from generator
+    ltx_str = r"-i (\sum_{j = 0}^{N-1} h_{j} ([\sigma_j^z, \rho])) "
+    ltx_str += r"-i (\sum_{j,k = 0}^{N-1} Jxx_{j,k} ([\sigma_j^x \sigma_k^x, \rho])) "
+    ltx_str += r"-i (\sum_{j,k = 0}^{N-1} Jyy_{j,k} ([\sigma_j^y \sigma_k^y, \rho])) "
+    ltx_str += r"-i (\sum_{j,k = 0}^{N-1} Jzz_{j,k} ([\sigma_j^z \sigma_k^z, \rho])) "
+    # TODO the case below also fails, fixed, upload
+    #ltx_str += r"+ \sum_{j,k = 0}^{N-1} gxx_{j,k} (\sigma_j^x \rho \sigma_k^x - \frac{1}{2} \sigma_k^x \sigma_j^x \rho  - \frac{1}{2} \rho \sigma_k^x \sigma_j^x )"
+    # TODO: multiple dissipators not possible, fixed, upload
+    #ltx_str += r"+ \sum_{j,k = 0}^{N-1} gxx_{j,k} (\sigma_j^x \rho \sigma_k^x - \frac{1}{2} \{ \sigma_k^x \sigma_j^x, \rho \} )"
+    #ltx_str += r"+ \sum_{j,k = 0}^{N-1} gyy_{j,k} (\sigma_j^y \rho \sigma_k^y - \frac{1}{2} \{ \sigma_k^y \sigma_j^y, \rho \} )"
+    ltx_str += r"+ \sum_{j,k = 0}^{N-1} gzz_{j,k} (\sigma_j^z \rho \sigma_k^z - \frac{1}{2} \{ \sigma_k^z \sigma_j^z, \rho \} )"
+    mpo1 = lindblad_mpo_latex(ops, ltx_str, parameters)
+    print(mpo1)
+
+    # crosscheck between test cases
+    #tol = 1e-12
+    # check by ||Ldag L||^2 norm, should be the same
+    #assert abs(mpo1.norm() - ref.norm()) < tol
+    # check by ||Ldag(a) L(b)||^2, should be the same if L(a) == L(b)
+    #tmp = mps.measure_overlap(mpo1, ref)
+    #assert abs(tmp / ref.norm()**2 - 1) < tol
+
 if __name__ == '__main__':
-    test_transcriptions()
+    #test_transcriptions()
+    test_models()
+    #test_heisenberg() TODO in prepartion, include Jxy terms to check order on the conjugated space
+
+
+# This is c2: 
+# [single_term(op=(('minus',), ('imun',), ('h', 0), ('z', 'jk'), ('e',), ('n',), ('d',), ('s',), ('u',), ('m',))), single_term(op=(('minus',), ('imun',), ('h', 0), ('minus',), ('zcc', 'jb'), ('e',), ('n',), ('d',), ('s',), ('u',), ('m',))), single_term(op=(('minus',), ('imun',), ('h', 1), ('z', 'jk'), ('e',), ('n',), ('d',), ('s',), ('u',), ('m',))), single_term(op=(('minus',), ('imun',), ('h', 1), ('minus',), ('zcc', 'jb'), ('e',), ('n',), ('d',), ('s',), ('u',), ('m',)))]
+
+
+# This is c2: 
+# [single_term(op=(('minus',), ('1',), ('h', 0), ('z', 0))), single_term(op=(('minus',), ('1',), ('h', 0), ('minus',), ('zcc', 1))), single_term(op=(('minus',), ('1',), ('h', 1), ('z', 2))), single_term(op=(('minus',), ('1',), ('h', 1), ('minus',), ('zcc', 3)))]
