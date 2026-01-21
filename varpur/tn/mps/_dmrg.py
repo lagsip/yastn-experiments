@@ -2,7 +2,7 @@
 from typing import NamedTuple
 import logging
 from yastn import eigs, YastnError, ncon
-from yastn import svd_with_truncation
+from yastn import eigh, svd, svd_with_truncation
 from varpur.tn.mps._env import Env_double_lindblad
 
 logger = logging.Logger('dmrg')
@@ -89,7 +89,7 @@ def _dmrg_(psi, H, method,
     yield DMRG_out(sweep, str(method), E, dE, max_dS, max_dw)
 
 
-def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False, case="B"):
+def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False, case="A"):
     r"""
     Perform sweep with 1-site DMRG, see :meth:`dmrg` for description.
 
@@ -106,18 +106,26 @@ def _dmrg_sweep_1site_(env, opts_eigs=None, Schmidt=None, precompute=False, case
         for n in rhoA.sweep(to=to):
             # calculate AdagA
             initA = rhoA[n]
-            if case is "A":
+            if case == "A":
                 AdagA = initA.tensordot(initA.conj(), axes=((3,),(3,)))
                 AdagA = AdagA.transpose(axes=(3,0,1,5,2,4,))
-            if case is "B":
+            if case == "B":
                 AdagA = ncon([initA, initA.conj()], [(-1,-2,-3,-4), (-5,-8,-7,-6)])
             _, (BdagB,) = eigs(lambda x: env.Heff1(x, n), AdagA, k=1, **opts_eigs)
-            if case is "A":
-                exit()
-            if case is "B":
+            if case == "A":
+                u, s, v = svd_with_truncation(BdagB, axes=((1,2,4), (0,5,3)), D_total=2, sU=-1)
+                #print(s.to_numpy().diagonal())
+                extractA = u
+                #print((extractA - initA).norm())
+            if case == "B":
                 u, s, v = svd_with_truncation(BdagB, axes=((0,1,2,3), (4,5,6,7)), D_total=1)
+                #print(s.to_numpy().diagonal())
+                #u, s, v = svd(BdagB, axes=((0,1,2,3), (4,5,6,7)))
+                #print(s.to_numpy().diagonal())
+                #s, u = eigh(BdagB, axes=((0,1,2,3), (4,5,6,7)))
+                #print(s.to_numpy().diagonal())
                 extractA = u.remove_leg()
-                print(s.to_numpy().diagonal(), (extractA - initA).norm())
+                #print((extractA - initA).norm())
             rhoA[n] = extractA
             rhoA.orthogonalize_site_(n, to=to, normalize=True)
             if Schmidt is not None and to == 'first' and n != rhoA.first:

@@ -146,8 +146,6 @@ def test_time_evolution():
 
         if dir == 'z':
             assert abs(tmp -  1) < tol # if aligned with 'z', the magnetization stays the same
-
-        if dir == 'z':
             assert abs(conv) < tol # if aligned with 'z', is steady state
 
         print("time: ", round(step.ti, 2), round(step.tf, 2), 

@@ -91,7 +91,6 @@ def technical_test():
     I = mps.product_mpo(ops.I(), N)
     A = mps.random_mpo(I, D_total=1)
     tmp = A[0].remove_leg(axis=0).remove_leg(axis=1).to_numpy()
-    print(tmp @ tmp.conj().T)
     
     # initiate environment
     my_env = env.Env_double_lindblad(A,LL,A)
@@ -122,8 +121,6 @@ def technical_test():
     
     for step in dmrg.dmrg_(A, LL, max_sweeps=10, iterator_step=1):
         print(step.sweeps, step.energy, np.array(A.get_entropy()).max() ,"\n")
-    tmp = A[0].remove_leg(axis=0).remove_leg(axis=1).to_numpy()
-    print(tmp @ tmp.conj().T)
 
 def physical_test_dmrg(ltx_str):
     # tensor settings
@@ -136,8 +133,6 @@ def physical_test_dmrg(ltx_str):
     
     # generate lindbladian
     ops = Spin12(sym=sym, **config_kwargs)
-    # TODO: is is possible to define sigma^*/- in the generator for the lindbladian.
-    # TODO what about the operator order???
     parameters = {"gamma": gamma,
                 "h": h,
                 "N": N,
@@ -157,7 +152,7 @@ def physical_test_dmrg(ltx_str):
     
     # initial guess of the solution
     I = mps.product_mpo(ops.I(), N)
-    A = I#mps.random_mpo(I, D_total=1)
+    A = mps.random_mpo(I, D_total=2)
     
     # measure
     ltx_str = r"\sum_{j=0}^{N-1} I_j \rho"
@@ -168,11 +163,13 @@ def physical_test_dmrg(ltx_str):
     Mx = lindblad_mpo_latex(ops, ltx_str, {"N": N}) / N
 
     # dmrg
+    # TODO check all contractions, problem with convergence of the result
     for step in dmrg.dmrg_(A, LL, max_sweeps=10, iterator_step=1):
         norm = env.Env_double_lindblad(A,id,I).setup_(to='first').measure().item()
+        # TODO change Env so it takes bra and ket on upper and lower layer, not mixed as right now. 
         mz = env.Env_double_lindblad(A,Mz,I).setup_(to='first').measure().item() / norm
         mx = env.Env_double_lindblad(A,Mx,I).setup_(to='first').measure().item() / norm
-        print(step.sweeps, step.energy, 'EE', np.array(A.get_entropy()).max(), "norm: ", norm, "Mz/Mx: ", mz, "/", mx)
+        print(step.sweeps, "conv:", step.energy / norm, 'EE', np.array(A.get_entropy()).max(), "norm: ", norm, "Mz/Mx: ", mz, "/", mx)
 
 def physical_test_tdvp(ltx_str):
     # tensor settings
@@ -185,15 +182,9 @@ def physical_test_tdvp(ltx_str):
     
     # generate lindbladian
     ops = Spin12(sym=sym, **config_kwargs)
-    # TODO: is is possible to define sigma^*/- in the generator for the lindbladian.
-    # TODO what about the operator order???
     parameters = {"gamma": gamma,
                 "h": h,
                 "N": N,
-                "imun": 1j,
-                "1.0div2.0": 1/2,
-                "Nx": [(i, 2*i, 2*i+1) for i in range(N)],
-                "NxN": [(i, j, 2*i, 2*i+1, 2*j, 2*j+1) for i in range(N) for j in range(N)]
                 }
     L = lindblad_mpo_latex(ops, ltx_str, parameters)
 
@@ -231,6 +222,7 @@ def physical_test_tdvp(ltx_str):
 
 if __name__ == '__main__':
     technical_test()
-    ltx_str = r"\sum_{j,k,jk,jb,kk,kb \in NxN} gamma_{j,k} (sp_{jk} smcc_{kb} - 1.0div2.0 ( sm_{kk} sp_{jk} + spcc_{kb} smcc_{jb} ) )" 
+    ltx_str = r"-i (\sum_{j = 0}^{N-1} h_{j} [z_j, \rho]) "
+    ltx_str += r"+ (\sum_{j,k = 0}^{N-1} \gamma_{j,k} (sp_j \rho sm_k - \frac{1}{2} \{ sm_k sp_j, \rho \} ))"
     physical_test_tdvp(ltx_str)
     physical_test_dmrg(ltx_str)

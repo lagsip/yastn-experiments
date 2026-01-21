@@ -72,23 +72,23 @@ class Env_double_lindblad(EnvParent_double3_obc):
         if to == 'last': # update left-env
             # contract 'upper' layer A, Adag to the left env
             axes = [(-1,-2,-3,2,1),(1,-5,-7,3),(2,-4,-6,3)]
-            tmp = ncon([self.F[n-1, n], self.bra[n].conj(), self.ket[n]], axes)
+            tmp = ncon([self.F[n-1, n], self.ket[n].conj(), self.ket[n]], axes)
             # contract operator
             axes = [(-1,-2,1,2,4,-6,-7),(1,-3,3,2),(3,-4,-5,4)]
             tmp = ncon([tmp, self.op[2*n], self.op[2*n+1]], axes)
             # contract 'lower' layer A, Adag
             axes = [(1,3,2,5,-3,-4,-5),(1,2,-1,4),(3,5,-2,4)]
-            self.F[n, n+1] = ncon([tmp, self.bra.A[n].conj(), self.ket.A[n]], axes)
+            self.F[n, n+1] = ncon([tmp, self.bra.A[n].conj(), self.bra.A[n]], axes)
         elif to == 'first':
             # contract 'upper' layer A, Adag to the right env
             axes = [(1,2,-5,-6,-7),(-1,-3,1,3),(-2,-4,2,3)]
-            tmp = ncon([self.F[n+1, n], self.bra[n].conj(), self.ket[n]], axes)
+            tmp = ncon([self.F[n+1, n], self.ket[n].conj(), self.ket[n]], axes)
             # contract operator
             axes = [(-1,-2,2,4,1,-6,-7),(-3,-4,3,4),(3,-5,1,2)]
             tmp = ncon([tmp, self.op[2*n], self.op[2*n+1]], axes)
             # contract 'lower' layer A, Adag
             axes = [(-1,-2,-3,2,5,3,1),(-5,2,1,4),(-4,5,3,4)]
-            self.F[n, n-1] = ncon([tmp, self.bra.A[n].conj(), self.ket.A[n]], axes)
+            self.F[n, n-1] = ncon([tmp, self.bra.A[n].conj(), self.bra.A[n]], axes)
 
     def Heff1(self, AdagA, n):
         FL = self.F[n - 1, n]
