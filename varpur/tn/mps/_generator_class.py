@@ -1143,7 +1143,7 @@ class GenericGenerator:
         for i in range(len(new_term)):
             t = new_term[i]
             if t[0] in brackets or (t[0] == "\\" and t[1] in brackets):
-                new_term[i] = self.resolve_term(self.split_ltx2terms(t),parameters=parameters,operations=operations)
+                new_term[i] = self.resolve_term(self.split_ltx2terms(t, index=1, start_layer=1),parameters=parameters,operations=operations)
 
         for op in list(operations):
             while(op in new_term):
@@ -1164,7 +1164,6 @@ class GenericGenerator:
                     new_term = be4 + [operations[op](args[0], args[1])] + after
                 else:
                     new_term = new_term[:-2] + [new_term[-2] + new_term[-1]]
-
 
         return complex(new_term[0])
 
