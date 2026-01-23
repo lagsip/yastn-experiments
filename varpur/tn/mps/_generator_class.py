@@ -848,13 +848,13 @@ class GenericGenerator:
         while(f_loc != -1):
             top_terms, mid_loc = self.split_ltx2terms(new_expr, f_loc + 5, return_length=True)
             bot_terms, end_loc = self.split_ltx2terms(new_expr, mid_loc, return_length=True)
-            print(top_terms)
-            print(bot_terms)
+            # print(top_terms)
+            # print(bot_terms)
             try:
                 top_val = self.resolve_term(top_terms[1:-1], parameters=parameters)
                 bot_val = self.resolve_term(bot_terms[1:-1], parameters=parameters)
-                print(top_val)
-                print(bot_val)
+                # print(top_val)
+                # print(bot_val)
                 top_real = ""
                 top_imag = ""
                 bot_real = ""
@@ -928,7 +928,7 @@ class GenericGenerator:
             subscript = subscript[:-len(end_subscr)] + end_subscr[1:]
             # if multiple objects were in the subscript separated by a comma, remove the comma on 1 side
             if(ket_arg_ind+1 < len(subscript) and subscript[ket_arg_ind+1] == ","):
-                print("found comma")
+                # print("found comma")
                 subscript = subscript[:ket_arg_ind] + subscript[(ket_arg_ind+1):]
             elif(subscript[ket_arg_ind-1] == ","):
                 subscript = subscript[:(ket_arg_ind-1)] + subscript[ket_arg_ind:]
@@ -1134,8 +1134,8 @@ class GenericGenerator:
                          operations={
                                      "*": lambda a,b: a*b,
                                      "/": lambda a,b: a/b,
-                                     "+": lambda a,b: a+b,
-                                     "-": lambda a,b: a-b},
+                                     "-": lambda a,b: a-b,
+                                     "+": lambda a,b: a+b},
                              brackets=["{","[","("]):
         
         new_term = term.copy()
@@ -1150,7 +1150,7 @@ class GenericGenerator:
                 ind = new_term.index(op)
                 if(ind == 0):
                     # if the found index is 0 consider that it might be a sign, otherwise ignore it
-                    new_term = new_term[1:]
+                    new_term = [new_term[0] + new_term[1]] + new_term[2:]
                 elif(0 < ind < (len(new_term)-1)):
                     # if the ind is inbetween two other entries, perform the operation on those two entries
                     be4 = []
@@ -1163,7 +1163,7 @@ class GenericGenerator:
                     args = [self.get_value(new_term[ind-1], parameters), self.get_value(new_term[ind+1], parameters)]
                     new_term = be4 + [operations[op](args[0], args[1])] + after
                 else:
-                    new_term = new_term[:-1]
+                    new_term = new_term[:-2] + [new_term[-2] + new_term[-1]]
 
 
         return complex(new_term[0])

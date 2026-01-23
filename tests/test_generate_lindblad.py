@@ -105,7 +105,7 @@ def lindblad_mpo_latex(ops, ltx_str, parameters):
     """
     N = parameters["N"]
     # input operators
-    generate = gen_mps.GenericGenerator(2*N, ops, debug=True)
+    generate = gen_mps.GenericGenerator(2*N, ops, debug=False)
     return generate.mpo_from_latex(ltx_str, parameters=parameters, ignore_i=False, rho2ketbra=True)
 
 def test_transcriptions():
